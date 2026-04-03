@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Poker Night</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0c0c0c;
+    --surface: #141414;
+    --surface2: #1c1c1c;
+    --border: #2a2a2a;
+    --gold: #c9a84c;
+    --gold-dim: #6b5a28;
+    --green: #1e7a45;
+    --green-bright: #27ae60;
+    --red: #c0392b;
+    --red-bright: #e74c3c;
+    --text: #e8e0cc;
+    --muted: #666;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    min-height: 100vh;
+    padding: 16px;
+    max-width: 480px;
+    margin: 0 auto;
+  }
+  .header { text-align: center; padding: 20px 0 16px; border-bottom: 1px solid var(--border); margin-bottom: 20px; }
+  .header h1 { font-family: 'Bebas Neue', sans-serif; font-size: 48px; letter-spacing: 8px; color: var(--gold); line-height: 1; }
+  .header p { font-size: 10px; letter-spacing: 3px; text-transform: uppercase; color: var(--muted); margin-top: 4px; }
+  .section { margin-bottom: 20px; }
+  .section-title { font-size: 9px; letter-spacing: 4px; text-transform: uppercase; color: var(--gold-dim); margin-bottom: 10px; }
+
+  /* TIMER */
+  .timer-card { background: var(--surface); border: 1px solid var(--border); padding: 20px; }
+  .level-info { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; }
+  .current-level { font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); }
+  .current-blinds { font-family: 'Bebas Neue', sans-serif; font-size: 36px; color: var(--gold); letter-spacing: 3px; line-height: 1; }
+  .next-level-info { text-align: right; }
+  .next-label { font-size: 9px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); }
+  .next-blinds { font-size: 14px; color: var(--muted); margin-top: 2px; }
+  .timer-display { text-align: center; margin: 16px 0; }
+  .timer-digits { font-family: 'Bebas Neue', sans-serif; font-size: 80px; letter-spacing: 4px; line-height: 1; color: var(--text); transition: color 0.3s; }
+  .timer-digits.warning { color: #e67e22; }
+  .timer-digits.danger { color: var(--red-bright); }
+  .timer-progress { width: 100%; height: 3px; background: var(--border); margin: 10px 0; }
+  .timer-progress-bar { height: 100%; background: var(--gold); transition: width 1s linear, background 0.3s; }
+  .timer-controls { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-top: 14px; }
+  .btn { padding: 12px 8px; border: 1px solid var(--border); background: var(--surface2); color: var(--text); font-family: 'DM Mono', monospace; font-size: 11px; letter-spacing: 1px; cursor: pointer; text-transform: uppercase; transition: all 0.15s; user-select: none; }
+  .btn:active { transform: scale(0.97); }
+  .btn:hover { border-color: var(--gold-dim); }
+  .btn-primary { background: var(--gold); color: #000; border-color: var(--gold); font-size: 13px; letter-spacing: 2px; }
+  .btn-primary:hover { background: #d4b356; }
+  .rebuy-closed-badge { display: inline-block; background: rgba(192,57,43,0.15); border: 1px solid var(--red); color: var(--red-bright); font-size: 9px; letter-spacing: 2px; text-transform: uppercase; padding: 3px 8px; margin-top: 8px; }
+  .rebuy-open-badge { display: inline-block; background: rgba(39,174,96,0.1); border: 1px solid var(--green); color: var(--green-bright); font-size: 9px; letter-spacing: 2px; text-transform: uppercase; padding: 3px 8px; margin-top: 8px; }
+
+  /* BLIND TABLE */
+  .blind-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .blind-table thead tr { border-bottom: 1px solid var(--gold-dim); }
+  .blind-table th { font-size: 8px; letter-spacing: 2px; text-transform: uppercase; color: var(--gold-dim); padding: 6px 8px; text-align: left; font-weight: 400; }
+  .blind-table th:last-child { text-align: right; }
+  .blind-table td { padding: 9px 8px; border-bottom: 1px solid rgba(255,255,255,0.04); font-size: 12px; }
+  .blind-table td:last-child { text-align: right; color: var(--muted); font-size: 11px; }
+  .blind-table tr.active-row td { background: rgba(201,168,76,0.12); color: var(--gold); }
+  .blind-table tr.active-row td:last-child { color: var(--gold-dim); }
+  .blind-table tr.past-row td { opacity: 0.35; }
+  .level-badge { display: inline-block; width: 20px; color: var(--muted); font-size: 10px; }
+  .rebuy-cut-row td { background: rgba(192,57,43,0.07); color: var(--red-bright); font-size: 9px; letter-spacing: 2px; text-transform: uppercase; text-align: center !important; padding: 5px 8px; border-bottom: 1px solid rgba(192,57,43,0.3); }
+
+  /* PLAYERS */
+  .add-player-row { display: flex; gap: 8px; margin-bottom: 10px; }
+  .player-input { flex: 1; background: var(--surface); border: 1px solid var(--border); color: var(--text); font-family: 'DM Mono', monospace; font-size: 13px; padding: 10px 12px; outline: none; }
+  .player-input:focus { border-color: var(--gold-dim); }
+  .player-input::placeholder { color: var(--muted); font-size: 11px; }
+  .player-list { display: flex; flex-direction: column; gap: 6px; }
+  .player-card { background: var(--surface); border: 1px solid var(--border); padding: 12px 14px; display: flex; align-items: center; gap: 10px; }
+  .player-card.eliminated { opacity: 0.4; border-color: var(--red); }
+  .player-card.eliminated .player-name { text-decoration: line-through; color: var(--muted); }
+  .player-name { flex: 1; font-size: 13px; }
+  .rebuy-counter { display: flex; align-items: center; gap: 6px; }
+  .rebuy-dots { display: flex; gap: 4px; }
+  .rebuy-dot { width: 8px; height: 8px; border-radius: 50%; border: 1px solid var(--border); background: transparent; transition: background 0.2s; }
+  .rebuy-dot.used { background: var(--gold); border-color: var(--gold); }
+  .rebuy-btn { background: transparent; border: 1px solid var(--border); color: var(--text); font-family: 'DM Mono', monospace; font-size: 11px; padding: 4px 8px; cursor: pointer; transition: all 0.15s; }
+  .rebuy-btn:hover:not(:disabled) { border-color: var(--gold); color: var(--gold); }
+  .rebuy-btn:disabled { opacity: 0.25; cursor: not-allowed; }
+  .elim-btn { background: transparent; border: 1px solid transparent; color: var(--muted); font-size: 16px; cursor: pointer; padding: 2px 4px; transition: color 0.15s; }
+  .elim-btn:hover { color: var(--red-bright); }
+  .player-card.eliminated .elim-btn { color: var(--green-bright); }
+  .rebuy-count-label { font-size: 10px; color: var(--muted); min-width: 24px; text-align: right; }
+
+  /* PAYOUT */
+  .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
+  .info-card { background: var(--surface); border: 1px solid var(--border); padding: 14px; }
+  .info-label { font-size: 8px; letter-spacing: 3px; text-transform: uppercase; color: var(--gold-dim); margin-bottom: 8px; }
+  .info-val { font-family: 'Bebas Neue', sans-serif; font-size: 28px; color: var(--gold); letter-spacing: 2px; line-height: 1; }
+  .info-sub { font-size: 10px; color: var(--muted); margin-top: 3px; }
+
+  /* RULES */
+  .rules-card { background: var(--surface); border: 1px solid var(--border); padding: 14px; margin-bottom: 20px; }
+  .rule-line { font-size: 11px; color: var(--text); padding: 5px 0; border-bottom: 1px solid rgba(255,255,255,0.04); line-height: 1.4; display: flex; gap: 8px; }
+  .rule-line:last-child { border-bottom: none; }
+  .rule-icon { color: var(--gold); flex-shrink: 0; }
+
+  /* ALARM */
+  .alarm-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.93); z-index: 100; align-items: center; justify-content: center; flex-direction: column; text-align: center; padding: 20px; }
+  .alarm-overlay.show { display: flex; }
+  .alarm-title { font-family: 'Bebas Neue', sans-serif; font-size: 52px; color: var(--gold); letter-spacing: 6px; animation: pulse 0.8s infinite alternate; }
+  .alarm-next { font-size: 13px; color: var(--muted); margin: 10px 0 24px; letter-spacing: 1px; }
+  .alarm-next span { color: var(--text); }
+  @keyframes pulse { from { opacity: 0.6; } to { opacity: 1; } }
+
+  footer { text-align: center; font-size: 9px; letter-spacing: 2px; color: #333; text-transform: uppercase; padding: 20px 0 10px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>POKER NIGHT</h1>
+  <p>Godrej Trees — Texas Hold'em Tournament</p>
+</div>
+
+<!-- TIMER -->
+<div class="section">
+  <div class="section-title">// Level Timer</div>
+  <div class="timer-card">
+    <div class="level-info">
+      <div>
+        <div class="current-level" id="currentLevelLabel">Level 1 of 11</div>
+        <div class="current-blinds" id="currentBlinds">10 / 20</div>
+        <div id="rebuyBadge" class="rebuy-open-badge">Rebuys Open</div>
+      </div>
+      <div class="next-level-info">
+        <div class="next-label">Next Level</div>
+        <div class="next-blinds" id="nextBlinds">10 / 20</div>
+      </div>
+    </div>
+    <div class="timer-display">
+      <div class="timer-digits" id="timerDisplay">15:00</div>
+      <div class="timer-progress">
+        <div class="timer-progress-bar" id="progressBar" style="width:100%"></div>
+      </div>
+    </div>
+    <div class="timer-controls">
+      <button class="btn" onclick="resetTimer()">Reset</button>
+      <button class="btn btn-primary" id="startPauseBtn" onclick="toggleTimer()">START</button>
+      <button class="btn" onclick="nextLevel()">Next ▶</button>
+    </div>
+  </div>
+</div>
+
+<!-- BLIND SCHEDULE -->
+<div class="section">
+  <div class="section-title">// Blind Schedule</div>
+  <table class="blind-table">
+    <thead>
+      <tr>
+        <th>LVL</th>
+        <th>Blinds (SB / BB)</th>
+        <th>Time</th>
+      </tr>
+    </thead>
+    <tbody id="blindTableBody"></tbody>
+  </table>
+</div>
+
+<!-- PLAYERS -->
+<div class="section">
+  <div class="section-title">// Players</div>
+  <div class="add-player-row">
+    <input class="player-input" id="playerNameInput" type="text" placeholder="Enter player name" maxlength="20"
+      onkeydown="if(event.key==='Enter') addPlayer()">
+    <button class="btn btn-primary" onclick="addPlayer()" style="padding:10px 16px;white-space:nowrap">+ Add</button>
+  </div>
+  <div class="player-list" id="playerList"></div>
+</div>
+
+<!-- PAYOUT -->
+<div class="section">
+  <div class="section-title">// Payout</div>
+  <div class="info-grid">
+    <div class="info-card">
+      <div class="info-label">Winner</div>
+      <div class="info-val">70%</div>
+      <div class="info-sub">of total pot</div>
+    </div>
+    <div class="info-card">
+      <div class="info-label">Runner-up</div>
+      <div class="info-val">30%</div>
+      <div class="info-sub">of total pot</div>
+    </div>
+  </div>
+  <div class="info-card">
+    <div class="info-label">Prize Pool</div>
+    <div style="font-size:12px;color:var(--muted);line-height:1.8" id="prizePoolCalc">Add players to calculate</div>
+  </div>
+</div>
+
+<!-- RULES -->
+<div class="section">
+  <div class="section-title">// Rules</div>
+  <div class="rules-card">
+    <div class="rule-line"><span class="rule-icon">♠</span>Texas Hold'em only</div>
+    <div class="rule-line"><span class="rule-icon">♥</span>₹1,000 buy-in. Rebuy = ₹1,000 same stack</div>
+    <div class="rule-line"><span class="rule-icon">♦</span>Max 2 rebuys per player — on bust only</div>
+    <div class="rule-line"><span class="rule-icon">♣</span>Rebuys close after Level 4 ends (1:00)</div>
+    <div class="rule-line"><span class="rule-icon">♠</span>Post Level 4 bust = eliminated, no rebuy</div>
+    <div class="rule-line"><span class="rule-icon">♥</span>Winner treats breakfast at Ellie 🍳</div>
+  </div>
+</div>
+
+<!-- FULL RESET -->
+<div class="section">
+  <div class="section-title">// Reset</div>
+  <div class="rules-card" style="padding:16px">
+    <div style="font-size:11px;color:var(--muted);margin-bottom:12px;line-height:1.5">Resets everything — timer, level, all players and rebuys. Use at the start of a new game.</div>
+    <button class="btn" id="fullResetBtn" onclick="confirmFullReset()" style="width:100%;border-color:var(--red);color:var(--red-bright);font-size:12px;letter-spacing:2px;padding:14px">⟳ RESET ENTIRE GAME</button>
+    <div id="resetConfirm" style="display:none;margin-top:10px">
+      <div style="font-size:11px;color:var(--text);margin-bottom:8px;text-align:center">Are you sure? This clears all players and progress.</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <button class="btn" onclick="cancelReset()">Cancel</button>
+        <button class="btn btn-primary" onclick="executeFullReset()" style="background:var(--red);border-color:var(--red)">Yes, Reset</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<footer>Good luck. May the best hand win.</footer>
+
+<!-- ALARM OVERLAY -->
+<div class="alarm-overlay" id="alarmOverlay">
+  <div class="alarm-title" id="alarmTitle">LEVEL OVER</div>
+  <div class="alarm-next" id="alarmNext">Next: <span></span></div>
+  <button class="btn btn-primary" style="padding:14px 32px;font-size:14px;letter-spacing:3px" onclick="dismissAlarm()">ADVANCE LEVEL</button>
+  <button class="btn" style="margin-top:10px;padding:10px 24px" onclick="stayOnLevel()">Stay on Current Level</button>
+</div>
+
+<script>
+  const LEVELS = [
+    { sb: 10,   bb: 20   },
+    { sb: 10,   bb: 20   },
+    { sb: 20,   bb: 40   },
+    { sb: 50,   bb: 100  },
+    { sb: 100,  bb: 200  },
+    { sb: 150,  bb: 300  },
+    { sb: 200,  bb: 400  },
+    { sb: 300,  bb: 600  },
+    { sb: 500,  bb: 1000 },
+    { sb: 1000, bb: 2000 },
+    { sb: 2000, bb: 4000 },
+  ];
+
+  const LEVEL_DURATION = 15 * 60;
+  const REBUY_CUTOFF = 4; // rebuys close after this level index (0-based = level 4)
+
+  let currentLevel = 0;
+  let timeLeft = LEVEL_DURATION;
+  let timerInterval = null;
+  let isRunning = false;
+  let players = [];
+  let audioCtx = null;
+  let beepInterval = null;
+
+  buildBlindTable();
+  updateTimerUI();
+  renderPlayers();
+
+  function buildBlindTable() {
+    const tbody = document.getElementById('blindTableBody');
+    tbody.innerHTML = '';
+    LEVELS.forEach((lvl, i) => {
+      const mins = i * 15;
+      const h = Math.floor(mins / 60);
+      const m = mins % 60;
+      const timeStr = `${h}:${String(m).padStart(2,'0')}`;
+      const row = document.createElement('tr');
+      if (i === currentLevel) row.classList.add('active-row');
+      else if (i < currentLevel) row.classList.add('past-row');
+      row.innerHTML = `<td><span class="level-badge">${i+1}</span></td><td>${lvl.sb.toLocaleString()} / ${lvl.bb.toLocaleString()}</td><td>${timeStr}</td>`;
+      tbody.appendChild(row);
+      if (i === REBUY_CUTOFF - 1) {
+        const cut = document.createElement('tr');
+        cut.className = 'rebuy-cut-row';
+        cut.innerHTML = '<td colspan="3">⛔ Rebuys Close After This Level</td>';
+        tbody.appendChild(cut);
+      }
+    });
+  }
+
+  function toggleTimer() {
+    isRunning ? pauseTimer() : startTimer();
+  }
+
+  function startTimer() {
+    if (currentLevel >= LEVELS.length) return;
+    isRunning = true;
+    document.getElementById('startPauseBtn').textContent = 'PAUSE';
+    timerInterval = setInterval(tick, 1000);
+  }
+
+  function pauseTimer() {
+    isRunning = false;
+    document.getElementById('startPauseBtn').textContent = 'START';
+    clearInterval(timerInterval);
+  }
+
+  function resetTimer() {
+    pauseTimer();
+    timeLeft = LEVEL_DURATION;
+    updateTimerUI();
+  }
+
+  function tick() {
+    if (timeLeft > 0) { timeLeft--; updateTimerUI(); }
+    else { pauseTimer(); triggerAlarm(); }
+  }
+
+  function updateTimerUI() {
+    const mins = Math.floor(timeLeft / 60);
+    const secs = timeLeft % 60;
+    const display = document.getElementById('timerDisplay');
+    display.textContent = `${String(mins).padStart(2,'0')}:${String(secs).padStart(2,'0')}`;
+    display.className = 'timer-digits';
+    if (timeLeft <= 60) display.classList.add('danger');
+    else if (timeLeft <= 180) display.classList.add('warning');
+
+    const pct = (timeLeft / LEVEL_DURATION) * 100;
+    const bar = document.getElementById('progressBar');
+    bar.style.width = pct + '%';
+    bar.style.background = timeLeft <= 60 ? 'var(--red-bright)' : timeLeft <= 180 ? '#e67e22' : 'var(--gold)';
+
+    const lvl = LEVELS[currentLevel];
+    document.getElementById('currentLevelLabel').textContent = `Level ${currentLevel + 1} of ${LEVELS.length}`;
+    document.getElementById('currentBlinds').textContent = `${lvl.sb.toLocaleString()} / ${lvl.bb.toLocaleString()}`;
+    const next = LEVELS[currentLevel + 1];
+    document.getElementById('nextBlinds').textContent = next ? `${next.sb.toLocaleString()} / ${next.bb.toLocaleString()}` : '— Final —';
+
+    const badge = document.getElementById('rebuyBadge');
+    const rebuysOpen = currentLevel < REBUY_CUTOFF;
+    badge.className = rebuysOpen ? 'rebuy-open-badge' : 'rebuy-closed-badge';
+    badge.textContent = rebuysOpen ? 'Rebuys Open' : 'Rebuys Closed';
+  }
+
+  function nextLevel() {
+    if (currentLevel < LEVELS.length - 1) {
+      currentLevel++;
+      timeLeft = LEVEL_DURATION;
+      pauseTimer();
+      buildBlindTable();
+      updateTimerUI();
+      renderPlayers();
+    }
+  }
+
+  function triggerAlarm() {
+    playBeep();
+    const next = LEVELS[currentLevel + 1];
+    document.getElementById('alarmTitle').textContent = `LEVEL ${currentLevel + 1} OVER`;
+    document.getElementById('alarmNext').innerHTML = next
+      ? `Next → <span>Level ${currentLevel + 2}: ${next.sb.toLocaleString()} / ${next.bb.toLocaleString()}</span>`
+      : `<span>Final level complete</span>`;
+    document.getElementById('alarmOverlay').classList.add('show');
+  }
+
+  function dismissAlarm() {
+    document.getElementById('alarmOverlay').classList.remove('show');
+    stopBeep();
+    nextLevel();
+  }
+
+  function stayOnLevel() {
+    document.getElementById('alarmOverlay').classList.remove('show');
+    stopBeep();
+    timeLeft = LEVEL_DURATION;
+    updateTimerUI();
+  }
+
+  function playBeep() {
+    try {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      let count = 0;
+      beepInterval = setInterval(() => {
+        if (count >= 8) { clearInterval(beepInterval); return; }
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain); gain.connect(audioCtx.destination);
+        osc.frequency.value = count % 2 === 0 ? 880 : 660;
+        gain.gain.setValueAtTime(0.5, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.4);
+        osc.start(audioCtx.currentTime); osc.stop(audioCtx.currentTime + 0.4);
+        count++;
+      }, 500);
+    } catch(e) {}
+  }
+
+  function stopBeep() {
+    if (beepInterval) clearInterval(beepInterval);
+    if (audioCtx) { try { audioCtx.close(); } catch(e) {} audioCtx = null; }
+  }
+
+  function addPlayer() {
+    const input = document.getElementById('playerNameInput');
+    const name = input.value.trim();
+    if (!name) return;
+    players.push({ name, rebuys: 0, eliminated: false });
+    input.value = '';
+    renderPlayers();
+    updatePrizePool();
+  }
+
+  function renderPlayers() {
+    const list = document.getElementById('playerList');
+    list.innerHTML = '';
+    if (players.length === 0) {
+      list.innerHTML = '<div style="font-size:11px;color:var(--muted);padding:8px 2px">No players added yet</div>';
+      return;
+    }
+    const rebuysOpen = currentLevel < REBUY_CUTOFF;
+    players.forEach((p, i) => {
+      const canRebuy = rebuysOpen && p.rebuys < 2 && !p.eliminated;
+      const card = document.createElement('div');
+      card.className = 'player-card' + (p.eliminated ? ' eliminated' : '');
+      card.innerHTML = `
+        <div class="player-name">${p.name}</div>
+        <div class="rebuy-counter">
+          <div class="rebuy-dots">
+            <div class="rebuy-dot ${p.rebuys >= 1 ? 'used' : ''}"></div>
+            <div class="rebuy-dot ${p.rebuys >= 2 ? 'used' : ''}"></div>
+          </div>
+          <button class="rebuy-btn" onclick="addRebuy(${i})" ${canRebuy ? '' : 'disabled'}>+R</button>
+        </div>
+        <div class="rebuy-count-label">${p.rebuys}/2</div>
+        <button class="elim-btn" onclick="toggleEliminate(${i})" title="${p.eliminated ? 'Restore' : 'Eliminate'}">${p.eliminated ? '↩' : '✕'}</button>
+      `;
+      list.appendChild(card);
+    });
+  }
+
+  function addRebuy(i) {
+    const p = players[i];
+    if (currentLevel >= REBUY_CUTOFF || p.rebuys >= 2 || p.eliminated) return;
+    p.rebuys++;
+    renderPlayers();
+    updatePrizePool();
+  }
+
+  function toggleEliminate(i) {
+    players[i].eliminated = !players[i].eliminated;
+    renderPlayers();
+  }
+
+  function confirmFullReset() {
+    document.getElementById('resetConfirm').style.display = 'block';
+    document.getElementById('fullResetBtn').style.display = 'none';
+  }
+
+  function cancelReset() {
+    document.getElementById('resetConfirm').style.display = 'none';
+    document.getElementById('fullResetBtn').style.display = 'block';
+  }
+
+  function executeFullReset() {
+    // Reset timer state
+    pauseTimer();
+    currentLevel = 0;
+    timeLeft = LEVEL_DURATION;
+    // Reset players
+    players = [];
+    // Reset prize pool
+    document.getElementById('prizePoolCalc').innerHTML = 'Add players to calculate';
+    // Rebuild UI
+    buildBlindTable();
+    updateTimerUI();
+    renderPlayers();
+    // Hide reset confirm
+    document.getElementById('resetConfirm').style.display = 'none';
+    document.getElementById('fullResetBtn').style.display = 'block';
+  }
+
+  function updatePrizePool() {
+    const totalRebuys = players.reduce((s, p) => s + p.rebuys, 0);
+    const total = (players.length + totalRebuys) * 1000;
+    const winner = Math.round(total * 0.7);
+    const runner = Math.round(total * 0.3);
+    document.getElementById('prizePoolCalc').innerHTML =
+      `₹${total.toLocaleString('en-IN')} total &nbsp;·&nbsp; ${players.length} players + ${totalRebuys} rebuys<br>` +
+      `<span style="color:var(--gold)">Winner ₹${winner.toLocaleString('en-IN')}</span> &nbsp;·&nbsp; ` +
+      `<span style="color:var(--text)">2nd ₹${runner.toLocaleString('en-IN')}</span>`;
+  }
+</script>
+</body>
+</html>
