@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Poker Night — Display</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #0a0a0a;
+  --surface: #141414;
+  --border: #242424;
+  --gold: #c9a84c;
+  --gold-dim: #7a6530;
+  --text: #e8e0cc;
+  --muted: #505050;
+  --red: #e74c3c;
+  --green: #27ae60;
+  --orange: #e67e22;
+}
+html, body { width: 100%; height: 100%; overflow: hidden; background: var(--bg); color: var(--text); font-family: 'DM Mono', monospace; }
+
+/* HEADER */
+.header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 36px; border-bottom: 1px solid var(--border);
+  height: 56px; background: var(--surface);
+}
+.title { font-family: 'Bebas Neue', sans-serif; font-size: 28px; letter-spacing: 6px; color: var(--gold); }
+.header-center { text-align: center; }
+.level-label { font-size: 11px; letter-spacing: 3px; text-transform: uppercase; color: var(--muted); }
+.rebuy-badge {
+  display: inline-block; font-size: 9px; letter-spacing: 2px; text-transform: uppercase;
+  padding: 3px 8px; border: 1px solid; margin-top: 4px;
+}
+.rebuy-badge.open { color: var(--green); border-color: var(--green); }
+.rebuy-badge.closed { color: var(--red); border-color: var(--red); }
+.header-right { text-align: right; }
+.conn-status { display: flex; align-items: center; justify-content: flex-end; gap: 6px; font-size: 9px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); }
+.conn-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); flex-shrink: 0; }
+.conn-dot.connected { background: var(--green); }
+.subtitle { font-size: 9px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); margin-top: 4px; }
+
+/* MAIN — 3 columns */
+.main {
+  display: grid; grid-template-columns: 1fr 2fr 1fr;
+  align-items: center; gap: 0;
+  height: calc(100vh - 56px - 116px - 72px);
+  padding: 0 36px;
+}
+.main-divider { width: 1px; background: var(--border); height: 60%; }
+
+/* BLINDS */
+.blind-section { text-align: center; padding: 20px; }
+.blind-label { font-size: 9px; letter-spacing: 4px; text-transform: uppercase; color: var(--muted); margin-bottom: 14px; }
+.blind-value {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: clamp(40px, 5vw, 72px);
+  color: var(--gold); letter-spacing: 4px; line-height: 1;
+}
+.next-blind-value {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: clamp(30px, 3.5vw, 52px);
+  color: var(--muted); letter-spacing: 3px; line-height: 1;
+}
+
+/* TIMER */
+.timer-section { text-align: center; padding: 20px; }
+.timer-digits {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: clamp(96px, 18vw, 200px);
+  letter-spacing: 8px; line-height: 1; color: var(--text); transition: color 0.3s;
+}
+.timer-digits.warning { color: var(--orange); }
+.timer-digits.danger { color: var(--red); animation: pulse-danger 0.6s infinite alternate; }
+@keyframes pulse-danger { from { opacity: 0.65; } to { opacity: 1; } }
+.progress-wrap { width: 100%; height: 4px; background: var(--border); margin: 14px 0 10px; border-radius: 2px; }
+.progress-fill { height: 100%; border-radius: 2px; background: var(--gold); transition: width 1s linear, background 0.3s; }
+.paused-label { font-size: 11px; letter-spacing: 3px; text-transform: uppercase; color: var(--muted); border: 1px solid var(--border); display: inline-block; padding: 3px 10px; }
+
+/* PLAYERS */
+.players-wrap {
+  height: 116px; border-top: 1px solid var(--border);
+  display: flex; align-items: center; gap: 16px; padding: 0 36px; overflow: hidden;
+}
+.players-section-label { font-size: 9px; letter-spacing: 3px; text-transform: uppercase; color: var(--muted); white-space: nowrap; }
+.player-chips { display: flex; flex-wrap: wrap; gap: 8px; flex: 1; overflow: hidden; align-content: center; }
+.player-chip {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--surface); border: 1px solid var(--border);
+  padding: 7px 14px; font-size: 13px; white-space: nowrap;
+}
+.player-chip.eliminated { opacity: 0.3; border-color: var(--red); text-decoration: line-through; color: var(--muted); }
+.rdots { display: flex; gap: 3px; }
+.rdot { width: 7px; height: 7px; border-radius: 50%; border: 1px solid var(--muted); }
+.rdot.used { background: var(--gold); border-color: var(--gold); }
+.player-summary { text-align: right; font-size: 11px; color: var(--muted); white-space: nowrap; line-height: 1.8; min-width: 90px; }
+
+/* FOOTER */
+.footer {
+  height: 72px; border-top: 1px solid var(--border); background: var(--surface);
+  display: flex; align-items: center; justify-content: space-around; padding: 0 36px;
+}
+.stat { text-align: center; }
+.stat-label { font-size: 8px; letter-spacing: 3px; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; }
+.stat-val { font-family: 'Bebas Neue', sans-serif; font-size: 26px; color: var(--gold); letter-spacing: 2px; line-height: 1; }
+.footer-divider { width: 1px; height: 36px; background: var(--border); }
+
+/* ALARM */
+.alarm-overlay {
+  display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.96);
+  z-index: 100; flex-direction: column; align-items: center; justify-content: center; text-align: center;
+}
+.alarm-overlay.show { display: flex; }
+.alarm-title {
+  font-family: 'Bebas Neue', sans-serif; font-size: clamp(60px, 10vw, 100px);
+  color: var(--gold); letter-spacing: 8px; animation: pulse 0.8s infinite alternate;
+}
+@keyframes pulse { from { opacity: 0.4; } to { opacity: 1; } }
+.alarm-next { font-size: 18px; color: var(--muted); margin-top: 16px; letter-spacing: 2px; line-height: 2; }
+.alarm-next span { color: var(--text); }
+.alarm-hint { font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); margin-top: 24px; border: 1px solid var(--border); padding: 8px 20px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="title">POKER NIGHT</div>
+  <div class="header-center">
+    <div class="level-label" id="levelLabel">Level 1 of 11</div>
+    <div id="rebuyBadgeWrap"><span class="rebuy-badge open" id="rebuyBadge">Rebuys Open</span></div>
+  </div>
+  <div class="header-right">
+    <div class="conn-status">
+      <div class="conn-dot" id="connDot"></div>
+      <span id="connLabel">Connecting</span>
+    </div>
+    <div class="subtitle">Godrej Trees · Hold'em</div>
+  </div>
+</div>
+
+<div class="main">
+  <div class="blind-section">
+    <div class="blind-label">Current Blinds</div>
+    <div class="blind-value" id="currentBlinds">— / —</div>
+  </div>
+
+  <div class="timer-section">
+    <div class="timer-digits" id="timerDisplay">15:00</div>
+    <div class="progress-wrap">
+      <div class="progress-fill" id="progressBar" style="width:100%"></div>
+    </div>
+    <div class="paused-label" id="pausedLabel">Paused</div>
+  </div>
+
+  <div class="blind-section">
+    <div class="blind-label">Next Level</div>
+    <div class="next-blind-value" id="nextBlinds">— / —</div>
+  </div>
+</div>
+
+<div class="players-wrap">
+  <div class="players-section-label">Players</div>
+  <div class="player-chips" id="playerChips">
+    <div style="font-size:11px;color:var(--muted)">Waiting for players...</div>
+  </div>
+  <div class="player-summary" id="playerSummary"></div>
+</div>
+
+<div class="footer">
+  <div class="stat">
+    <div class="stat-label">Active</div>
+    <div class="stat-val" id="statActive">0</div>
+  </div>
+  <div class="footer-divider"></div>
+  <div class="stat">
+    <div class="stat-label">Rebuys</div>
+    <div class="stat-val" id="statRebuys">0</div>
+  </div>
+  <div class="footer-divider"></div>
+  <div class="stat">
+    <div class="stat-label">Prize Pool</div>
+    <div class="stat-val" id="statPool">₹0</div>
+  </div>
+  <div class="footer-divider"></div>
+  <div class="stat">
+    <div class="stat-label">1st Place</div>
+    <div class="stat-val" id="stat1st">₹0</div>
+  </div>
+  <div class="footer-divider"></div>
+  <div class="stat">
+    <div class="stat-label">2nd Place</div>
+    <div class="stat-val" id="stat2nd">₹0</div>
+  </div>
+</div>
+
+<div class="alarm-overlay" id="alarmOverlay">
+  <div class="alarm-title" id="alarmTitle">LEVEL OVER</div>
+  <div class="alarm-next" id="alarmNext"></div>
+  <div class="alarm-hint">Advance the level on the controller</div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyAWKtxjYscK109gGcGYU2BhNhnT53NXCfc",
+  authDomain: "home-poker-6ce82.firebaseapp.com",
+  databaseURL: "https://home-poker-6ce82-default-rtdb.firebaseio.com",
+  projectId: "home-poker-6ce82",
+  storageBucket: "home-poker-6ce82.firebasestorage.app",
+  messagingSenderId: "319555536674",
+  appId: "1:319555536674:web:5e7fc360f573e7675ac77b"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+const LEVELS = [
+  { sb: 10,   bb: 20   },
+  { sb: 10,   bb: 20   },
+  { sb: 20,   bb: 40   },
+  { sb: 50,   bb: 100  },
+  { sb: 100,  bb: 200  },
+  { sb: 150,  bb: 300  },
+  { sb: 200,  bb: 400  },
+  { sb: 300,  bb: 600  },
+  { sb: 500,  bb: 1000 },
+  { sb: 1000, bb: 2000 },
+  { sb: 2000, bb: 4000 },
+];
+const LEVEL_DURATION = 15 * 60;
+const REBUY_CUTOFF = 4;
+
+let gameState = null;
+let playersData = {};
+let alarmShown = false;
+let audioCtx = null;
+let beepInterval = null;
+
+db.ref('.info/connected').on('value', snap => {
+  const ok = snap.val();
+  document.getElementById('connDot').className = 'conn-dot' + (ok ? ' connected' : '');
+  document.getElementById('connLabel').textContent = ok ? 'Live' : 'Reconnecting...';
+});
+
+db.ref('game').on('value', snap => {
+  gameState = snap.val();
+  renderAll();
+});
+
+db.ref('players').on('value', snap => {
+  playersData = snap.val() || {};
+  renderPlayers();
+});
+
+// Tick every second to keep timer smooth between Firebase updates
+setInterval(() => {
+  if (gameState?.timer?.isRunning) renderTimer();
+}, 1000);
+
+function getTimeLeft() {
+  if (!gameState?.timer) return LEVEL_DURATION;
+  const t = gameState.timer;
+  if (!t.isRunning) return t.pausedAt ?? LEVEL_DURATION;
+  const elapsed = Math.floor((Date.now() - t.startedAt) / 1000);
+  return Math.max(0, (t.pausedAt ?? LEVEL_DURATION) - elapsed);
+}
+
+function renderAll() {
+  if (!gameState) return;
+  const level = gameState.currentLevel ?? 0;
+  const lvl = LEVELS[level];
+  const next = LEVELS[level + 1];
+
+  document.getElementById('levelLabel').textContent = `Level ${level + 1} of ${LEVELS.length}`;
+  document.getElementById('currentBlinds').textContent = fmt(lvl.sb) + ' / ' + fmt(lvl.bb);
+  document.getElementById('nextBlinds').textContent = next ? fmt(next.sb) + ' / ' + fmt(next.bb) : '— Final —';
+
+  const open = level < REBUY_CUTOFF;
+  const badge = document.getElementById('rebuyBadge');
+  badge.className = 'rebuy-badge ' + (open ? 'open' : 'closed');
+  badge.textContent = open ? 'Rebuys Open' : 'Rebuys Closed';
+
+  renderTimer();
+}
+
+function renderTimer() {
+  if (!gameState) return;
+  const timeLeft = getTimeLeft();
+  const isRunning = gameState.timer?.isRunning;
+
+  const mins = Math.floor(timeLeft / 60);
+  const secs = timeLeft % 60;
+  const el = document.getElementById('timerDisplay');
+  el.textContent = pad(mins) + ':' + pad(secs);
+  el.className = 'timer-digits' + (timeLeft <= 60 ? ' danger' : timeLeft <= 180 ? ' warning' : '');
+
+  const pct = (timeLeft / LEVEL_DURATION) * 100;
+  const bar = document.getElementById('progressBar');
+  bar.style.width = pct + '%';
+  bar.style.background = timeLeft <= 60 ? 'var(--red)' : timeLeft <= 180 ? 'var(--orange)' : 'var(--gold)';
+
+  document.getElementById('pausedLabel').style.display = isRunning ? 'none' : 'inline-block';
+
+  if (timeLeft <= 0 && !alarmShown) { alarmShown = true; showAlarm(); }
+  else if (timeLeft > 0 && alarmShown) { alarmShown = false; hideAlarm(); }
+}
+
+function renderPlayers() {
+  const players = Object.values(playersData).sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+  const chips = document.getElementById('playerChips');
+
+  if (players.length === 0) {
+    chips.innerHTML = '<div style="font-size:11px;color:var(--muted)">Waiting for players...</div>';
+    document.getElementById('playerSummary').innerHTML = '';
+    document.getElementById('statActive').textContent = '0';
+    document.getElementById('statRebuys').textContent = '0';
+    document.getElementById('statPool').textContent = '₹0';
+    document.getElementById('stat1st').textContent = '₹0';
+    document.getElementById('stat2nd').textContent = '₹0';
+    return;
+  }
+
+  chips.innerHTML = '';
+  players.forEach(p => {
+    const chip = document.createElement('div');
+    chip.className = 'player-chip' + (p.eliminated ? ' eliminated' : '');
+    const dots = [0, 1].map(i => `<div class="rdot ${(p.rebuys ?? 0) > i ? 'used' : ''}"></div>`).join('');
+    chip.innerHTML = `<span>${p.name}</span><div class="rdots">${dots}</div>`;
+    chips.appendChild(chip);
+  });
+
+  const active = players.filter(p => !p.eliminated).length;
+  const out = players.length - active;
+  const totalRebuys = players.reduce((s, p) => s + (p.rebuys ?? 0), 0);
+  const pool = (players.length + totalRebuys) * 1000;
+
+  document.getElementById('playerSummary').innerHTML = `${active} active<br>${out} eliminated`;
+  document.getElementById('statActive').textContent = active;
+  document.getElementById('statRebuys').textContent = totalRebuys;
+  document.getElementById('statPool').textContent = '₹' + pool.toLocaleString('en-IN');
+  document.getElementById('stat1st').textContent = '₹' + Math.round(pool * 0.7).toLocaleString('en-IN');
+  document.getElementById('stat2nd').textContent = '₹' + Math.round(pool * 0.3).toLocaleString('en-IN');
+}
+
+function showAlarm() {
+  const level = gameState?.currentLevel ?? 0;
+  const next = LEVELS[level + 1];
+  document.getElementById('alarmTitle').textContent = `LEVEL ${level + 1} OVER`;
+  document.getElementById('alarmNext').innerHTML = next
+    ? `Next → <span>Level ${level + 2}: ${fmt(next.sb)} / ${fmt(next.bb)}</span>`
+    : `<span>Final level complete!</span>`;
+  document.getElementById('alarmOverlay').classList.add('show');
+  playBeep();
+}
+
+function hideAlarm() {
+  document.getElementById('alarmOverlay').classList.remove('show');
+  stopBeep();
+}
+
+function playBeep() {
+  try {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    let count = 0;
+    beepInterval = setInterval(() => {
+      if (count >= 8) { clearInterval(beepInterval); return; }
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.connect(gain); gain.connect(audioCtx.destination);
+      osc.frequency.value = count % 2 === 0 ? 880 : 660;
+      gain.gain.setValueAtTime(0.5, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.4);
+      osc.start(); osc.stop(audioCtx.currentTime + 0.4);
+      count++;
+    }, 500);
+  } catch(e) {}
+}
+
+function stopBeep() {
+  if (beepInterval) clearInterval(beepInterval);
+  if (audioCtx) { try { audioCtx.close(); } catch(e) {} audioCtx = null; }
+}
+
+function fmt(n) { return n.toLocaleString('en-IN'); }
+function pad(n) { return String(n).padStart(2, '0'); }
+</script>
+</body>
+</html>

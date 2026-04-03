@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Poker Night — Controller</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+:root {
+  --bg: #f4f4f4;
+  --surface: #ffffff;
+  --border: #d0d0d0;
+  --gold: #a07820;
+  --gold-dim: #b89030;
+  --text: #1a1a1a;
+  --muted: #888;
+  --green: #27ae60;
+  --red: #e74c3c;
+  --orange: #e67e22;
+}
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'DM Mono', monospace;
+  min-height: 100vh;
+  padding-bottom: 40px;
+  max-width: 480px;
+  margin: 0 auto;
+}
+
+/* HEADER */
+.header {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+.header-title {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 26px;
+  letter-spacing: 5px;
+  color: var(--gold);
+}
+.conn-status {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 10px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.conn-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--muted);
+  flex-shrink: 0;
+}
+.conn-dot.connected { background: var(--green); }
+
+/* SECTION */
+.section {
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  margin-top: 10px;
+}
+.section-header {
+  padding: 9px 16px;
+  border-bottom: 1px solid var(--border);
+  font-size: 9px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.section-body { padding: 14px 16px; }
+
+/* TIMER */
+.timer-display {
+  text-align: center;
+  margin-bottom: 14px;
+}
+.timer-digits {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 72px;
+  letter-spacing: 4px;
+  line-height: 1;
+  color: var(--text);
+  transition: color 0.3s;
+}
+.timer-digits.warning { color: var(--orange); }
+.timer-digits.danger  { color: var(--red); }
+.timer-meta {
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 5px;
+  letter-spacing: 1px;
+}
+
+/* BUTTONS */
+.btn-grid { display: grid; gap: 8px; }
+.col2 { grid-template-columns: 1fr 1fr; }
+.col3 { grid-template-columns: 1fr 1fr 1fr; }
+.btn {
+  padding: 14px 8px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font-family: 'DM Mono', monospace;
+  font-size: 12px;
+  letter-spacing: 1px;
+  cursor: pointer;
+  text-transform: uppercase;
+  user-select: none;
+  transition: opacity 0.15s;
+}
+.btn:active { opacity: 0.6; transform: scale(0.97); }
+.btn-gold  { background: var(--gold); color: #fff; border-color: var(--gold); font-size: 13px; letter-spacing: 2px; }
+.btn-red   { color: var(--red); border-color: rgba(231,76,60,0.3); background: rgba(231,76,60,0.06); }
+
+/* LEVEL */
+.level-display {
+  text-align: center;
+  margin-bottom: 14px;
+}
+.level-num {
+  font-size: 10px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 4px;
+}
+.level-blinds {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 42px;
+  letter-spacing: 3px;
+  color: var(--gold);
+  line-height: 1;
+}
+.level-next {
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 5px;
+  letter-spacing: 1px;
+}
+
+/* PLAYERS */
+.add-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.player-input {
+  flex: 1;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-family: 'DM Mono', monospace;
+  font-size: 14px;
+  padding: 10px 12px;
+  outline: none;
+}
+.player-input:focus { border-color: var(--gold); }
+.player-input::placeholder { color: var(--muted); font-size: 11px; }
+
+.player-list { display: flex; flex-direction: column; gap: 6px; }
+.player-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+}
+.player-row.eliminated {
+  opacity: 0.4;
+  border-color: rgba(231,76,60,0.3);
+}
+.player-row.eliminated .player-name {
+  text-decoration: line-through;
+  color: var(--muted);
+}
+.player-name { flex: 1; font-size: 13px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rdots { display: flex; gap: 4px; }
+.rdot { width: 9px; height: 9px; border-radius: 50%; border: 1px solid var(--border); background: transparent; }
+.rdot.used { background: var(--gold); border-color: var(--gold); }
+.rebuy-btn {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  padding: 5px 9px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.rebuy-btn:active { background: var(--border); }
+.rebuy-btn:disabled { opacity: 0.2; cursor: not-allowed; }
+.rebuy-count { font-size: 10px; color: var(--muted); min-width: 22px; text-align: right; flex-shrink: 0; }
+.elim-btn {
+  background: transparent;
+  border: none;
+  font-size: 18px;
+  cursor: pointer;
+  padding: 2px 4px;
+  color: var(--muted);
+  flex-shrink: 0;
+  line-height: 1;
+}
+.empty-players { font-size: 11px; color: var(--muted); padding: 4px 2px; }
+
+/* RESET CONFIRM */
+#resetConfirm { display: none; margin-top: 10px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-title">Controller</div>
+  <div class="conn-status">
+    <div class="conn-dot" id="connDot"></div>
+    <span id="connLabel">Connecting</span>
+  </div>
+</div>
+
+<!-- TIMER -->
+<div class="section" style="margin-top:10px">
+  <div class="section-header">Timer</div>
+  <div class="section-body">
+    <div class="timer-display">
+      <div class="timer-digits" id="timerDigits">15:00</div>
+      <div class="timer-meta" id="timerMeta">Level 1 · 10 / 20</div>
+    </div>
+    <div class="btn-grid col3">
+      <button class="btn" onclick="resetTimer()">Reset</button>
+      <button class="btn btn-gold" id="startPauseBtn" onclick="toggleTimer()">Start</button>
+      <button class="btn" onclick="nextLevel()">Next ▶</button>
+    </div>
+  </div>
+</div>
+
+<!-- LEVEL -->
+<div class="section">
+  <div class="section-header">Level</div>
+  <div class="section-body">
+    <div class="level-display">
+      <div class="level-num" id="levelNum">Level 1 of 11</div>
+      <div class="level-blinds" id="levelBlinds">10 / 20</div>
+      <div class="level-next" id="levelNext">Next: 10 / 20</div>
+    </div>
+    <div class="btn-grid col2">
+      <button class="btn" onclick="prevLevel()">◀ Prev</button>
+      <button class="btn" onclick="nextLevel()">Next ▶</button>
+    </div>
+  </div>
+</div>
+
+<!-- PLAYERS -->
+<div class="section">
+  <div class="section-header">Players</div>
+  <div class="section-body">
+    <div class="add-row">
+      <input class="player-input" id="playerInput" type="text" placeholder="Player name" maxlength="20"
+        onkeydown="if(event.key==='Enter')addPlayer()">
+      <button class="btn btn-gold" onclick="addPlayer()" style="padding:10px 14px;white-space:nowrap">+ Add</button>
+    </div>
+    <div class="player-list" id="playerList">
+      <div class="empty-players">No players yet</div>
+    </div>
+  </div>
+</div>
+
+<!-- RESET -->
+<div class="section">
+  <div class="section-header">Reset Game</div>
+  <div class="section-body">
+    <button class="btn btn-red" id="fullResetBtn" onclick="confirmReset()" style="width:100%;padding:14px;letter-spacing:2px">
+      ⟳ Reset Entire Game
+    </button>
+    <div id="resetConfirm">
+      <div style="font-size:11px;color:var(--muted);margin-bottom:10px;text-align:center;line-height:1.6">
+        Clears all players and progress.
+      </div>
+      <div class="btn-grid col2">
+        <button class="btn" onclick="cancelReset()">Cancel</button>
+        <button class="btn btn-red" onclick="executeReset()">Yes, Reset</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyAWKtxjYscK109gGcGYU2BhNhnT53NXCfc",
+  authDomain: "home-poker-6ce82.firebaseapp.com",
+  databaseURL: "https://home-poker-6ce82-default-rtdb.firebaseio.com",
+  projectId: "home-poker-6ce82",
+  storageBucket: "home-poker-6ce82.firebasestorage.app",
+  messagingSenderId: "319555536674",
+  appId: "1:319555536674:web:5e7fc360f573e7675ac77b"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+const LEVELS = [
+  { sb: 10,   bb: 20   },
+  { sb: 10,   bb: 20   },
+  { sb: 20,   bb: 40   },
+  { sb: 50,   bb: 100  },
+  { sb: 100,  bb: 200  },
+  { sb: 150,  bb: 300  },
+  { sb: 200,  bb: 400  },
+  { sb: 300,  bb: 600  },
+  { sb: 500,  bb: 1000 },
+  { sb: 1000, bb: 2000 },
+  { sb: 2000, bb: 4000 },
+];
+const LEVEL_DURATION = 15 * 60;
+const REBUY_CUTOFF = 4;
+
+let gameState = null;
+let playersData = {};
+
+// ── Connection ──────────────────────────────────────────────
+db.ref('.info/connected').on('value', snap => {
+  const ok = snap.val();
+  document.getElementById('connDot').className = 'conn-dot' + (ok ? ' connected' : '');
+  document.getElementById('connLabel').textContent = ok ? 'Live' : 'Offline';
+});
+
+// ── Listeners ───────────────────────────────────────────────
+db.ref('game').on('value', snap => {
+  gameState = snap.val();
+  renderGame();
+});
+
+db.ref('players').on('value', snap => {
+  playersData = snap.val() || {};
+  renderPlayers();
+});
+
+// Tick every second to animate timer between Firebase pushes
+setInterval(() => {
+  if (gameState?.timer?.isRunning) renderTimer();
+}, 1000);
+
+// ── Helpers ─────────────────────────────────────────────────
+function getTimeLeft() {
+  if (!gameState?.timer) return LEVEL_DURATION;
+  const t = gameState.timer;
+  if (!t.isRunning) return t.pausedAt ?? LEVEL_DURATION;
+  const elapsed = Math.floor((Date.now() - t.startedAt) / 1000);
+  return Math.max(0, (t.pausedAt ?? LEVEL_DURATION) - elapsed);
+}
+
+function fmt(n) { return n.toLocaleString('en-IN'); }
+function pad(n) { return String(n).padStart(2, '0'); }
+
+// ── Render ──────────────────────────────────────────────────
+function renderGame() {
+  if (!gameState) return;
+  renderTimer();
+  const level = gameState.currentLevel ?? 0;
+  const lvl = LEVELS[level];
+  const next = LEVELS[level + 1];
+  document.getElementById('levelNum').textContent = `Level ${level + 1} of ${LEVELS.length}`;
+  document.getElementById('levelBlinds').textContent = `${fmt(lvl.sb)} / ${fmt(lvl.bb)}`;
+  document.getElementById('levelNext').textContent = next
+    ? `Next: ${fmt(next.sb)} / ${fmt(next.bb)}`
+    : 'Final level';
+}
+
+function renderTimer() {
+  if (!gameState) return;
+  const timeLeft = getTimeLeft();
+  const isRunning = gameState.timer?.isRunning;
+  const level = gameState.currentLevel ?? 0;
+  const lvl = LEVELS[level];
+
+  const el = document.getElementById('timerDigits');
+  el.textContent = pad(Math.floor(timeLeft / 60)) + ':' + pad(timeLeft % 60);
+  el.className = 'timer-digits' + (timeLeft <= 60 ? ' danger' : timeLeft <= 180 ? ' warning' : '');
+
+  document.getElementById('timerMeta').textContent =
+    `Level ${level + 1} · ${fmt(lvl.sb)} / ${fmt(lvl.bb)}`;
+  document.getElementById('startPauseBtn').textContent = isRunning ? 'Pause' : 'Start';
+}
+
+function renderPlayers() {
+  const list = document.getElementById('playerList');
+  const level = gameState?.currentLevel ?? 0;
+  const rebuysOpen = level < REBUY_CUTOFF;
+  const entries = Object.entries(playersData).sort(([, a], [, b]) => (a.order ?? 0) - (b.order ?? 0));
+
+  if (entries.length === 0) {
+    list.innerHTML = '<div class="empty-players">No players yet</div>';
+    return;
+  }
+
+  list.innerHTML = '';
+  entries.forEach(([key, p]) => {
+    const canRebuy = rebuysOpen && (p.rebuys ?? 0) < 2 && !p.eliminated;
+    const row = document.createElement('div');
+    row.className = 'player-row' + (p.eliminated ? ' eliminated' : '');
+    const dots = [0, 1].map(i =>
+      `<div class="rdot ${(p.rebuys ?? 0) > i ? 'used' : ''}"></div>`
+    ).join('');
+    row.innerHTML = `
+      <div class="player-name">${p.name}</div>
+      <div class="rdots">${dots}</div>
+      <button class="rebuy-btn" onclick="addRebuy('${key}')" ${canRebuy ? '' : 'disabled'}>+R</button>
+      <div class="rebuy-count">${p.rebuys ?? 0}/2</div>
+      <button class="elim-btn" onclick="toggleElim('${key}')" title="${p.eliminated ? 'Restore' : 'Eliminate'}">${p.eliminated ? '↩' : '✕'}</button>
+    `;
+    list.appendChild(row);
+  });
+}
+
+// ── Timer controls ───────────────────────────────────────────
+function toggleTimer() {
+  if (gameState?.timer?.isRunning) {
+    const timeLeft = getTimeLeft();
+    db.ref('game/timer').update({ isRunning: false, pausedAt: timeLeft, startedAt: null });
+  } else {
+    const timeLeft = getTimeLeft();
+    db.ref('game/timer').update({
+      isRunning: true,
+      pausedAt: timeLeft,
+      startedAt: firebase.database.ServerValue.TIMESTAMP,
+    });
+  }
+}
+
+function resetTimer() {
+  db.ref('game/timer').update({ isRunning: false, pausedAt: LEVEL_DURATION, startedAt: null });
+}
+
+// ── Level controls ───────────────────────────────────────────
+function nextLevel() {
+  const level = gameState?.currentLevel ?? 0;
+  if (level >= LEVELS.length - 1) return;
+  db.ref('game').update({
+    currentLevel: level + 1,
+    timer: { isRunning: false, pausedAt: LEVEL_DURATION, startedAt: null },
+  });
+}
+
+function prevLevel() {
+  const level = gameState?.currentLevel ?? 0;
+  if (level <= 0) return;
+  db.ref('game').update({
+    currentLevel: level - 1,
+    timer: { isRunning: false, pausedAt: LEVEL_DURATION, startedAt: null },
+  });
+}
+
+// ── Player controls ──────────────────────────────────────────
+function addPlayer() {
+  const input = document.getElementById('playerInput');
+  const name = input.value.trim();
+  if (!name) return;
+  const order = Object.keys(playersData).length;
+  db.ref('players').push({ name, rebuys: 0, eliminated: false, order });
+  input.value = '';
+}
+
+function addRebuy(key) {
+  const p = playersData[key];
+  if (!p) return;
+  const level = gameState?.currentLevel ?? 0;
+  if (level >= REBUY_CUTOFF || (p.rebuys ?? 0) >= 2 || p.eliminated) return;
+  db.ref(`players/${key}`).update({ rebuys: (p.rebuys ?? 0) + 1 });
+}
+
+function toggleElim(key) {
+  const p = playersData[key];
+  if (!p) return;
+  db.ref(`players/${key}`).update({ eliminated: !p.eliminated });
+}
+
+// ── Reset ─────────────────────────────────────────────────────
+function confirmReset() {
+  document.getElementById('resetConfirm').style.display = 'block';
+  document.getElementById('fullResetBtn').style.display = 'none';
+}
+function cancelReset() {
+  document.getElementById('resetConfirm').style.display = 'none';
+  document.getElementById('fullResetBtn').style.display = 'block';
+}
+function executeReset() {
+  db.ref('game').set({ currentLevel: 0, timer: { isRunning: false, pausedAt: LEVEL_DURATION, startedAt: null } });
+  db.ref('players').remove();
+  cancelReset();
+}
+
+// ── Init ──────────────────────────────────────────────────────
+db.ref('game').once('value').then(snap => {
+  if (!snap.val()) {
+    db.ref('game').set({ currentLevel: 0, timer: { isRunning: false, pausedAt: LEVEL_DURATION, startedAt: null } });
+  }
+});
+</script>
+</body>
+</html>
