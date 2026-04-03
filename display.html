@@ -230,9 +230,9 @@ const LEVELS = [
   { sb: 1000, bb: 2000 },
   { sb: 2000, bb: 4000 },
 ];
-const LEVEL_DURATION = 15 * 60;
 const REBUY_CUTOFF = 4;
 
+let levelDuration = 15 * 60;
 let gameState = null;
 let playersData = {};
 let alarmShown = false;
@@ -247,6 +247,7 @@ db.ref('.info/connected').on('value', snap => {
 
 db.ref('game').on('value', snap => {
   gameState = snap.val();
+  if (gameState?.levelDuration) levelDuration = gameState.levelDuration;
   renderAll();
 });
 
@@ -261,11 +262,11 @@ setInterval(() => {
 }, 1000);
 
 function getTimeLeft() {
-  if (!gameState?.timer) return LEVEL_DURATION;
+  if (!gameState?.timer) return levelDuration;
   const t = gameState.timer;
-  if (!t.isRunning) return t.pausedAt ?? LEVEL_DURATION;
+  if (!t.isRunning) return t.pausedAt ?? levelDuration;
   const elapsed = Math.floor((Date.now() - t.startedAt) / 1000);
-  return Math.max(0, (t.pausedAt ?? LEVEL_DURATION) - elapsed);
+  return Math.max(0, (t.pausedAt ?? levelDuration) - elapsed);
 }
 
 function renderAll() {
@@ -297,7 +298,7 @@ function renderTimer() {
   el.textContent = pad(mins) + ':' + pad(secs);
   el.className = 'timer-digits' + (timeLeft <= 60 ? ' danger' : timeLeft <= 180 ? ' warning' : '');
 
-  const pct = (timeLeft / LEVEL_DURATION) * 100;
+  const pct = (timeLeft / levelDuration) * 100;
   const bar = document.getElementById('progressBar');
   bar.style.width = pct + '%';
   bar.style.background = timeLeft <= 60 ? 'var(--red)' : timeLeft <= 180 ? 'var(--orange)' : 'var(--gold)';

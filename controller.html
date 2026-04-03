@@ -138,11 +138,16 @@ body {
 }
 .level-blinds {
   font-family: 'Bebas Neue', sans-serif;
-  font-size: 42px;
-  letter-spacing: 3px;
+  font-size: clamp(24px, 8.5vw, 42px);
+  letter-spacing: clamp(1px, 0.5vw, 3px);
   color: var(--gold);
   line-height: 1;
+  white-space: nowrap;
 }
+.duration-row { display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 12px; }
+.duration-label { font-size: 13px; letter-spacing: 2px; color: var(--muted); min-width: 52px; text-align: center; }
+.btn-sm { padding: 6px 16px; border: 1px solid var(--border); background: var(--surface); color: var(--text); font-family: 'DM Mono', monospace; font-size: 20px; cursor: pointer; user-select: none; line-height: 1; }
+.btn-sm:active { opacity: 0.6; }
 .level-next {
   font-size: 11px;
   color: var(--muted);
@@ -237,6 +242,11 @@ body {
       <div class="timer-digits" id="timerDigits">15:00</div>
       <div class="timer-meta" id="timerMeta">Level 1 · 10 / 20</div>
     </div>
+    <div class="duration-row">
+      <button class="btn-sm" onclick="changeDuration(-1)">−</button>
+      <span class="duration-label" id="durationLabel">15 min</span>
+      <button class="btn-sm" onclick="changeDuration(+1)">+</button>
+    </div>
     <div class="btn-grid col3">
       <button class="btn" onclick="resetTimer()">Reset</button>
       <button class="btn btn-gold" id="startPauseBtn" onclick="toggleTimer()">Start</button>
@@ -324,9 +334,9 @@ const LEVELS = [
   { sb: 1000, bb: 2000 },
   { sb: 2000, bb: 4000 },
 ];
-const LEVEL_DURATION = 15 * 60;
 const REBUY_CUTOFF = 4;
 
+let levelDuration = 15 * 60;
 let gameState = null;
 let playersData = {};
 
@@ -340,6 +350,10 @@ db.ref('.info/connected').on('value', snap => {
 // ── Listeners ───────────────────────────────────────────────
 db.ref('game').on('value', snap => {
   gameState = snap.val();
+  if (gameState?.levelDuration) {
+    levelDuration = gameState.levelDuration;
+    document.getElementById('durationLabel').textContent = Math.round(levelDuration / 60) + ' min';
+  }
   renderGame();
 });
 
@@ -355,11 +369,11 @@ setInterval(() => {
 
 // ── Helpers ─────────────────────────────────────────────────
 function getTimeLeft() {
-  if (!gameState?.timer) return LEVEL_DURATION;
+  if (!gameState?.timer) return levelDuration;
   const t = gameState.timer;
-  if (!t.isRunning) return t.pausedAt ?? LEVEL_DURATION;
+  if (!t.isRunning) return t.pausedAt ?? levelDuration;
   const elapsed = Math.floor((Date.now() - t.startedAt) / 1000);
-  return Math.max(0, (t.pausedAt ?? LEVEL_DURATION) - elapsed);
+  return Math.max(0, (t.pausedAt ?? levelDuration) - elapsed);
 }
 
 function fmt(n) { return n.toLocaleString('en-IN'); }
@@ -425,6 +439,18 @@ function renderPlayers() {
   });
 }
 
+// ── Duration control ─────────────────────────────────────────
+function changeDuration(deltaMins) {
+  const current = Math.round(levelDuration / 60);
+  const next = Math.max(1, Math.min(60, current + deltaMins));
+  const secs = next * 60;
+  const updates = { 'game/levelDuration': secs };
+  if (!gameState?.timer?.isRunning) {
+    updates['game/timer'] = { isRunning: false, pausedAt: secs, startedAt: null };
+  }
+  db.ref().update(updates);
+}
+
 // ── Timer controls ───────────────────────────────────────────
 function toggleTimer() {
   if (gameState?.timer?.isRunning) {
@@ -441,7 +467,7 @@ function toggleTimer() {
 }
 
 function resetTimer() {
-  db.ref('game/timer').update({ isRunning: false, pausedAt: LEVEL_DURATION, startedAt: null });
+  db.ref('game/timer').update({ isRunning: false, pausedAt: levelDuration, startedAt: null });
 }
 
 // ── Level controls ───────────────────────────────────────────
@@ -450,7 +476,7 @@ function nextLevel() {
   if (level >= LEVELS.length - 1) return;
   db.ref('game').update({
     currentLevel: level + 1,
-    timer: { isRunning: false, pausedAt: LEVEL_DURATION, startedAt: null },
+    timer: { isRunning: false, pausedAt: levelDuration, startedAt: null },
   });
 }
 
@@ -459,7 +485,7 @@ function prevLevel() {
   if (level <= 0) return;
   db.ref('game').update({
     currentLevel: level - 1,
-    timer: { isRunning: false, pausedAt: LEVEL_DURATION, startedAt: null },
+    timer: { isRunning: false, pausedAt: levelDuration, startedAt: null },
   });
 }
 
@@ -497,7 +523,7 @@ function cancelReset() {
   document.getElementById('fullResetBtn').style.display = 'block';
 }
 function executeReset() {
-  db.ref('game').set({ currentLevel: 0, timer: { isRunning: false, pausedAt: LEVEL_DURATION, startedAt: null } });
+  db.ref('game').set({ currentLevel: 0, timer: { isRunning: false, pausedAt: levelDuration, startedAt: null } });
   db.ref('players').remove();
   cancelReset();
 }
@@ -505,7 +531,7 @@ function executeReset() {
 // ── Init ──────────────────────────────────────────────────────
 db.ref('game').once('value').then(snap => {
   if (!snap.val()) {
-    db.ref('game').set({ currentLevel: 0, timer: { isRunning: false, pausedAt: LEVEL_DURATION, startedAt: null } });
+    db.ref('game').set({ currentLevel: 0, timer: { isRunning: false, pausedAt: levelDuration, startedAt: null } });
   }
 });
 </script>
