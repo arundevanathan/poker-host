@@ -212,6 +212,111 @@ body {
 /* RESET CONFIRM */
 #resetConfirm { display: none; margin-top: 10px; }
 
+/* SETTINGS */
+.settings-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  user-select: none;
+}
+.lock-badge {
+  font-size: 9px;
+  letter-spacing: 1px;
+  padding: 2px 8px;
+  border: 1px solid;
+  text-transform: uppercase;
+}
+.lock-badge.unlocked { color: var(--green); border-color: var(--green); }
+.lock-badge.locked   { color: var(--red);   border-color: var(--red);   }
+.locked-notice {
+  font-size: 11px;
+  color: var(--muted);
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  margin-bottom: 12px;
+  letter-spacing: 0.5px;
+  text-align: center;
+  line-height: 1.5;
+}
+.setting-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.setting-label {
+  font-size: 10px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--muted);
+  min-width: 104px;
+  flex-shrink: 0;
+}
+.setting-input {
+  flex: 1;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-family: 'DM Mono', monospace;
+  font-size: 13px;
+  padding: 7px 10px;
+  outline: none;
+  min-width: 0;
+}
+.setting-input:focus { border-color: var(--gold); }
+.setting-input:disabled { opacity: 0.4; cursor: not-allowed; }
+.setting-group-title {
+  font-size: 9px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--muted);
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 5px;
+  margin: 14px 0 8px;
+}
+.level-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-bottom: 5px;
+}
+.level-num-label {
+  font-size: 10px;
+  color: var(--muted);
+  width: 18px;
+  text-align: right;
+  flex-shrink: 0;
+}
+.level-input {
+  width: 60px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-family: 'DM Mono', monospace;
+  font-size: 12px;
+  padding: 5px 6px;
+  outline: none;
+  text-align: right;
+}
+.level-input:focus { border-color: var(--gold); }
+.level-input:disabled { opacity: 0.4; cursor: not-allowed; }
+.level-sep  { font-size: 11px; color: var(--muted); flex-shrink: 0; }
+.break-label { font-size: 10px; color: var(--muted); display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+.level-del {
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-size: 16px;
+  cursor: pointer;
+  padding: 2px 4px;
+  flex-shrink: 0;
+  line-height: 1;
+}
+.level-del:hover { color: var(--red); }
+.level-del:disabled { opacity: 0.3; cursor: not-allowed; }
+
 /* NO-PIN ERROR STATE */
 .no-pin-overlay {
   display: none;
@@ -238,7 +343,7 @@ body {
 </head>
 <body>
 
-<!-- ── NO-PIN GUARD (shown when ?pin= is missing) ─────────────────────────── -->
+<!-- ── NO-PIN GUARD ─────────────────────────────────────────────────────────── -->
 <div class="no-pin-overlay" id="noPinOverlay">
   <div class="no-pin-title">No Game PIN</div>
   <div class="no-pin-msg">
@@ -265,7 +370,88 @@ body {
   </div>
 </div>
 
-<!-- TIMER -->
+<!-- ── TOURNAMENT SETTINGS ────────────────────────────────────────────────── -->
+<div class="section" style="margin-top:10px">
+  <div class="section-header settings-toggle" onclick="toggleSettings()">
+    <span>Tournament Settings</span>
+    <div style="display:flex;align-items:center;gap:8px">
+      <span class="lock-badge unlocked" id="lockBadge">Unlocked</span>
+      <span id="settingsArrow" style="font-size:10px;color:var(--muted)">▼</span>
+    </div>
+  </div>
+  <div id="settingsBody" style="display:none">
+    <div class="section-body">
+      <div class="locked-notice" id="lockedNotice" style="display:none">
+        Settings locked — tournament in progress.<br>Reset the game to edit.
+      </div>
+
+      <div class="setting-row">
+        <span class="setting-label">Name</span>
+        <input class="setting-input" id="cfgName" type="text" maxlength="40" placeholder="Home Poker Night">
+      </div>
+      <div class="setting-row">
+        <span class="setting-label">Starting Stack</span>
+        <input class="setting-input" id="cfgStack" type="number" min="100" step="100">
+      </div>
+      <div class="setting-row">
+        <span class="setting-label">Buy-in (₹)</span>
+        <input class="setting-input" id="cfgBuyin" type="number" min="0" step="100">
+      </div>
+      <div class="setting-row">
+        <span class="setting-label">Level Duration</span>
+        <input class="setting-input" id="cfgDuration" type="number" min="1" max="60" style="max-width:70px">
+        <span style="font-size:11px;color:var(--muted)">min</span>
+      </div>
+
+      <div class="setting-group-title">Blind Levels</div>
+      <div id="levelsContainer"></div>
+      <button class="btn" id="addLevelBtn" onclick="addLevelRow()"
+              style="padding:7px 12px;font-size:11px;letter-spacing:1px;margin-top:2px">
+        + Add Level
+      </button>
+
+      <div class="setting-group-title">Rebuys</div>
+      <div class="setting-row">
+        <span class="setting-label">Enabled</span>
+        <input type="checkbox" id="cfgRebuyEnabled" onchange="toggleRebuyOptions()">
+      </div>
+      <div id="rebuyOptions">
+        <div class="setting-row">
+          <span class="setting-label">Close After</span>
+          <span style="font-size:11px;color:var(--muted);flex-shrink:0">Level</span>
+          <input class="setting-input" id="cfgCutoffValue" type="number" min="1" style="max-width:62px">
+        </div>
+        <div class="setting-row">
+          <span class="setting-label">Max / Player</span>
+          <input class="setting-input" id="cfgMaxRebuys" type="number" min="0" max="10" style="max-width:62px">
+        </div>
+      </div>
+
+      <div class="setting-group-title">Add-on</div>
+      <div class="setting-row">
+        <span class="setting-label">Enabled</span>
+        <input type="checkbox" id="cfgAddonEnabled" onchange="toggleAddonOptions()">
+      </div>
+      <div id="addonOptions" style="display:none">
+        <div class="setting-row">
+          <span class="setting-label">Stack</span>
+          <input class="setting-input" id="cfgAddonStack" type="number" min="0" step="500">
+        </div>
+        <div class="setting-row">
+          <span class="setting-label">Cost (₹)</span>
+          <input class="setting-input" id="cfgAddonCost" type="number" min="0" step="100">
+        </div>
+      </div>
+
+      <button class="btn btn-gold" id="saveConfigBtn" onclick="saveConfig()"
+              style="width:100%;margin-top:12px;padding:13px;letter-spacing:2px">
+        Save Settings
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ── TIMER ───────────────────────────────────────────────────────────────── -->
 <div class="section" style="margin-top:10px">
   <div class="section-header">Timer</div>
   <div class="section-body">
@@ -286,14 +472,14 @@ body {
   </div>
 </div>
 
-<!-- LEVEL -->
+<!-- ── LEVEL ───────────────────────────────────────────────────────────────── -->
 <div class="section">
   <div class="section-header">Level</div>
   <div class="section-body">
     <div class="level-display">
-      <div class="level-num" id="levelNum">Level 1 of 11</div>
-      <div class="level-blinds" id="levelBlinds">10 / 20</div>
-      <div class="level-next" id="levelNext">Next: 10 / 20</div>
+      <div class="level-num" id="levelNum">Level 1</div>
+      <div class="level-blinds" id="levelBlinds">—</div>
+      <div class="level-next" id="levelNext">Next: —</div>
     </div>
     <div class="btn-grid col2">
       <button class="btn" onclick="prevLevel()">◀ Prev</button>
@@ -302,7 +488,7 @@ body {
   </div>
 </div>
 
-<!-- PLAYERS -->
+<!-- ── PLAYERS ─────────────────────────────────────────────────────────────── -->
 <div class="section">
   <div class="section-header">Players</div>
   <div class="section-body">
@@ -317,7 +503,7 @@ body {
   </div>
 </div>
 
-<!-- RESET -->
+<!-- ── RESET ───────────────────────────────────────────────────────────────── -->
 <div class="section">
   <div class="section-header">Reset Game</div>
   <div class="section-body">
@@ -326,7 +512,7 @@ body {
     </button>
     <div id="resetConfirm">
       <div style="font-size:11px;color:var(--muted);margin-bottom:10px;text-align:center;line-height:1.6">
-        Clears all players and resets progress.
+        Clears all players and resets progress. Settings will be unlocked.
       </div>
       <div class="btn-grid col2">
         <button class="btn" onclick="cancelReset()">Cancel</button>
@@ -340,55 +526,118 @@ body {
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 <script src="firebase-config.js"></script>
 <script>
-// ── READ PIN FROM URL ────────────────────────────────────────────────────────
+// ── PIN ──────────────────────────────────────────────────────────────────────
 const urlPin = new URLSearchParams(window.location.search).get('pin');
 
 if (!urlPin || !/^\d{4}$/.test(urlPin)) {
-  // Show the no-PIN error overlay; page is otherwise inert
   document.getElementById('noPinOverlay').classList.add('show');
 }
-
-// Display the PIN in the header for reference
 document.getElementById('headerPin').textContent = urlPin || '—';
 
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
-// ── SCOPED FIREBASE REFS ─────────────────────────────────────────────────────
-// All data lives under games/{pin}/ so multiple games never collide.
+// ── DEFAULT CONFIG ────────────────────────────────────────────────────────────
+const DEFAULT_CONFIG = {
+  tournamentName: 'Home Poker Night',
+  startingStack: 10000,
+  buyIn: 1000,
+  levelDurationMinutes: 15,
+  levels: [
+    { sb: 10,   bb: 20   },
+    { sb: 10,   bb: 20   },
+    { sb: 20,   bb: 40   },
+    { sb: 50,   bb: 100  },
+    { sb: 100,  bb: 200  },
+    { sb: 150,  bb: 300  },
+    { sb: 200,  bb: 400  },
+    { sb: 300,  bb: 600  },
+    { sb: 500,  bb: 1000 },
+    { sb: 1000, bb: 2000 },
+    { sb: 2000, bb: 4000 },
+  ],
+  rebuyEnabled: true,
+  rebuyCutoffType: 'level',
+  rebuyCutoffValue: 4,
+  maxRebuysPerPlayer: 2,
+  addonEnabled: false,
+  addonRules: { stack: 10000, cost: 1000 },
+  locked: false,
+};
+
+// ── FIREBASE REFS ─────────────────────────────────────────────────────────────
+const configRef  = () => db.ref(`games/${urlPin}/config`);
 const gameRef    = () => db.ref(`games/${urlPin}/game`);
 const playersRef = () => db.ref(`games/${urlPin}/players`);
 const playerRef  = (key) => db.ref(`games/${urlPin}/players/${key}`);
 
-const LEVELS = [
-  { sb: 10,   bb: 20   },
-  { sb: 10,   bb: 20   },
-  { sb: 20,   bb: 40   },
-  { sb: 50,   bb: 100  },
-  { sb: 100,  bb: 200  },
-  { sb: 150,  bb: 300  },
-  { sb: 200,  bb: 400  },
-  { sb: 300,  bb: 600  },
-  { sb: 500,  bb: 1000 },
-  { sb: 1000, bb: 2000 },
-  { sb: 2000, bb: 4000 },
-];
-const REBUY_CUTOFF = 4;
-
+// ── STATE ─────────────────────────────────────────────────────────────────────
+let config        = null;
+let gameState     = null;
+let playersData   = {};
 let levelDuration = 15 * 60;
-let gameState = null;
-let playersData = {};
+let settingsOpen  = false;
+let pendingLevels = [];
 
-// ── CONNECTION ───────────────────────────────────────────────────────────────
+// ── HELPERS ───────────────────────────────────────────────────────────────────
+function getLevels() {
+  if (!config?.levels) return DEFAULT_CONFIG.levels;
+  if (Array.isArray(config.levels)) return config.levels;
+  return Object.values(config.levels);
+}
+
+function rebuysOpen() {
+  if (!config?.rebuyEnabled) return false;
+  const level = gameState?.currentLevel ?? 0;
+  if (config.rebuyCutoffType === 'level') return level < (config.rebuyCutoffValue ?? 4);
+  return true;
+}
+
+function fmt(n) { return n.toLocaleString('en-IN'); }
+function pad(n) { return String(n).padStart(2, '0'); }
+
+function blindLabel(lvl) {
+  if (!lvl) return '—';
+  if (lvl.isBreak) return 'BREAK';
+  let s = `${fmt(lvl.sb)} / ${fmt(lvl.bb)}`;
+  if (lvl.ante) s += ` · ante ${fmt(lvl.ante)}`;
+  return s;
+}
+
+// ── CONNECTION ────────────────────────────────────────────────────────────────
 db.ref('.info/connected').on('value', snap => {
   const ok = snap.val();
   document.getElementById('connDot').className = 'conn-dot' + (ok ? ' connected' : '');
   document.getElementById('connLabel').textContent = ok ? 'Live' : 'Offline';
 });
 
-// ── FIREBASE LISTENERS ───────────────────────────────────────────────────────
-// Only attach listeners if we have a valid PIN
+// ── FIREBASE LISTENERS ────────────────────────────────────────────────────────
 if (urlPin && /^\d{4}$/.test(urlPin)) {
+  configRef().on('value', snap => {
+    const prevLocked = config?.locked;
+    config = snap.val();
+
+    if (!config) {
+      // Old game or first open — seed defaults
+      configRef().set(DEFAULT_CONFIG);
+      return;
+    }
+
+    // Firebase serialises JS arrays as keyed objects — normalise back to array
+    if (config.levels && !Array.isArray(config.levels)) {
+      config.levels = Object.values(config.levels);
+    }
+
+    renderLockBadge();
+
+    // If settings panel was open and config just became locked (e.g. timer started),
+    // refresh the panel to show the locked state and disable all inputs.
+    if (settingsOpen && !prevLocked && config.locked) populateSettings();
+
+    renderGame();
+    renderPlayers();
+  });
+
   gameRef().on('value', snap => {
     gameState = snap.val();
     if (gameState?.levelDuration) {
@@ -403,70 +652,74 @@ if (urlPin && /^\d{4}$/.test(urlPin)) {
     renderPlayers();
   });
 
-  // Initialise the game node if it doesn't exist yet (edge case: someone opens the URL directly)
+  // Seed game node if missing (direct URL access before index.html ran)
   gameRef().once('value').then(snap => {
     if (!snap.val()) {
+      const secs = DEFAULT_CONFIG.levelDurationMinutes * 60;
       gameRef().set({
         currentLevel: 0,
-        levelDuration,
-        timer: { isRunning: false, pausedAt: levelDuration, startedAt: null },
+        levelDuration: secs,
+        timer: { isRunning: false, pausedAt: secs, startedAt: null },
       });
     }
   });
 }
 
-// Tick every second to keep the displayed timer smooth between Firebase pushes
-setInterval(() => {
-  if (gameState?.timer?.isRunning) renderTimer();
-}, 1000);
+setInterval(() => { if (gameState?.timer?.isRunning) renderTimer(); }, 1000);
 
-// ── HELPERS ──────────────────────────────────────────────────────────────────
+// ── TIMER MATHS ───────────────────────────────────────────────────────────────
 function getTimeLeft() {
   if (!gameState?.timer) return levelDuration;
   const t = gameState.timer;
   if (!t.isRunning) return t.pausedAt ?? levelDuration;
-  const elapsed = Math.floor((Date.now() - t.startedAt) / 1000);
-  return Math.max(0, (t.pausedAt ?? levelDuration) - elapsed);
+  return Math.max(0, (t.pausedAt ?? levelDuration) - Math.floor((Date.now() - t.startedAt) / 1000));
 }
 
-function fmt(n) { return n.toLocaleString('en-IN'); }
-function pad(n) { return String(n).padStart(2, '0'); }
+// ── RENDER ────────────────────────────────────────────────────────────────────
+function renderLockBadge() {
+  const badge = document.getElementById('lockBadge');
+  if (!badge || !config) return;
+  badge.textContent = config.locked ? 'Locked' : 'Unlocked';
+  badge.className   = 'lock-badge ' + (config.locked ? 'locked' : 'unlocked');
+}
 
-// ── RENDER ───────────────────────────────────────────────────────────────────
 function renderGame() {
-  if (!gameState) return;
+  if (!gameState || !config) return;
   renderTimer();
-  const level = gameState.currentLevel ?? 0;
-  const lvl  = LEVELS[level];
-  const next = LEVELS[level + 1];
-  document.getElementById('levelNum').textContent    = `Level ${level + 1} of ${LEVELS.length}`;
-  document.getElementById('levelBlinds').textContent = `${fmt(lvl.sb)} / ${fmt(lvl.bb)}`;
-  document.getElementById('levelNext').textContent   = next
-    ? `Next: ${fmt(next.sb)} / ${fmt(next.bb)}`
-    : 'Final level';
+  const level  = gameState.currentLevel ?? 0;
+  const levels = getLevels();
+  const lvl    = levels[level];
+  const next   = levels[level + 1];
+  if (!lvl) return;
+
+  document.getElementById('levelNum').textContent    = `Level ${level + 1} of ${levels.length}`;
+  document.getElementById('levelBlinds').textContent = blindLabel(lvl);
+  document.getElementById('levelNext').textContent   = next ? `Next: ${blindLabel(next)}` : 'Final level';
 }
 
 function renderTimer() {
-  if (!gameState) return;
+  if (!gameState || !config) return;
   const timeLeft  = getTimeLeft();
   const isRunning = gameState.timer?.isRunning;
   const level     = gameState.currentLevel ?? 0;
-  const lvl       = LEVELS[level];
+  const lvl       = getLevels()[level];
+  if (!lvl) return;
 
   const el = document.getElementById('timerDigits');
   el.textContent = pad(Math.floor(timeLeft / 60)) + ':' + pad(timeLeft % 60);
   el.className   = 'timer-digits' + (timeLeft <= 60 ? ' danger' : timeLeft <= 180 ? ' warning' : '');
 
   document.getElementById('timerMeta').textContent =
-    `Level ${level + 1} · ${fmt(lvl.sb)} / ${fmt(lvl.bb)}`;
+    `Level ${level + 1} · ${blindLabel(lvl)}`;
   document.getElementById('startPauseBtn').textContent = isRunning ? 'Pause' : 'Start';
 }
 
 function renderPlayers() {
-  const list      = document.getElementById('playerList');
-  const level     = gameState?.currentLevel ?? 0;
-  const rebuysOpen = level < REBUY_CUTOFF;
-  const entries   = Object.entries(playersData).sort(([, a], [, b]) => (a.order ?? 0) - (b.order ?? 0));
+  if (!config) return;
+  const list    = document.getElementById('playerList');
+  const open    = rebuysOpen();
+  const maxR    = config.maxRebuysPerPlayer ?? 2;
+  const entries = Object.entries(playersData).sort(([, a], [, b]) => (a.order ?? 0) - (b.order ?? 0));
 
   if (entries.length === 0) {
     list.innerHTML = '<div class="empty-players">No players yet</div>';
@@ -475,17 +728,22 @@ function renderPlayers() {
 
   list.innerHTML = '';
   entries.forEach(([key, p]) => {
-    const canRebuy = rebuysOpen && (p.rebuys ?? 0) < 2 && !p.eliminated;
+    const canRebuy = open && (p.rebuys ?? 0) < maxR && !p.eliminated;
+    const canAddon = config.addonEnabled && !p.addon && !p.eliminated;
     const row      = document.createElement('div');
     row.className  = 'player-row' + (p.eliminated ? ' eliminated' : '');
-    const dots     = [0, 1].map(i =>
+    const dots     = Array.from({ length: maxR }, (_, i) =>
       `<div class="rdot ${(p.rebuys ?? 0) > i ? 'used' : ''}"></div>`
     ).join('');
+    const addonBtn = config.addonEnabled
+      ? `<button class="rebuy-btn" onclick="addAddon('${key}')" ${canAddon ? '' : 'disabled'} title="Add-on">+A</button>`
+      : '';
     row.innerHTML = `
       <div class="player-name">${p.name}</div>
       <div class="rdots">${dots}</div>
       <button class="rebuy-btn" onclick="addRebuy('${key}')" ${canRebuy ? '' : 'disabled'}>+R</button>
-      <div class="rebuy-count">${p.rebuys ?? 0}/2</div>
+      <div class="rebuy-count">${p.rebuys ?? 0}/${maxR}</div>
+      ${addonBtn}
       <button class="elim-btn" onclick="toggleElim('${key}')" title="${p.eliminated ? 'Restore' : 'Eliminate'}">
         ${p.eliminated ? '↩' : '✕'}
       </button>
@@ -494,12 +752,178 @@ function renderPlayers() {
   });
 }
 
-// ── DURATION CONTROL ─────────────────────────────────────────────────────────
+// ── SETTINGS PANEL ───────────────────────────────────────────────────────────
+function toggleSettings() {
+  const body = document.getElementById('settingsBody');
+  settingsOpen = body.style.display === 'none';
+  body.style.display = settingsOpen ? 'block' : 'none';
+  document.getElementById('settingsArrow').textContent = settingsOpen ? '▲' : '▼';
+  if (settingsOpen) populateSettings();
+}
+
+function populateSettings() {
+  if (!config) return;
+  const locked = !!config.locked;
+
+  document.getElementById('lockedNotice').style.display = locked ? 'block' : 'none';
+  document.getElementById('cfgName').value     = config.tournamentName || '';
+  document.getElementById('cfgStack').value    = config.startingStack ?? 10000;
+  document.getElementById('cfgBuyin').value    = config.buyIn ?? 1000;
+  document.getElementById('cfgDuration').value = config.levelDurationMinutes ?? 15;
+  document.getElementById('cfgRebuyEnabled').checked  = !!config.rebuyEnabled;
+  document.getElementById('cfgCutoffValue').value      = config.rebuyCutoffValue ?? 4;
+  document.getElementById('cfgMaxRebuys').value        = config.maxRebuysPerPlayer ?? 2;
+  document.getElementById('cfgAddonEnabled').checked   = !!config.addonEnabled;
+  document.getElementById('cfgAddonStack').value       = config.addonRules?.stack ?? 10000;
+  document.getElementById('cfgAddonCost').value        = config.addonRules?.cost ?? 1000;
+
+  toggleRebuyOptions();
+  toggleAddonOptions();
+
+  pendingLevels = getLevels().map(l => ({ ...l }));
+  renderLevelsTable();
+
+  document.querySelectorAll('#settingsBody input, #settingsBody select').forEach(el => {
+    el.disabled = locked;
+  });
+  document.getElementById('addLevelBtn').disabled   = locked;
+  document.getElementById('saveConfigBtn').disabled = locked;
+}
+
+function renderLevelsTable() {
+  const container = document.getElementById('levelsContainer');
+  if (!container) return;
+  const locked = !!config?.locked;
+  container.innerHTML = '';
+
+  pendingLevels.forEach((lvl, i) => {
+    const row = document.createElement('div');
+    row.className = 'level-row';
+    const dis = locked ? 'disabled' : '';
+
+    if (lvl.isBreak) {
+      row.innerHTML = `
+        <span class="level-num-label">${i + 1}</span>
+        <span style="flex:1;font-size:10px;letter-spacing:2px;color:var(--muted)">— BREAK —</span>
+        <label class="break-label">
+          <input type="checkbox" checked ${dis} onchange="toggleBreak(${i},this.checked)"> Break
+        </label>
+        <button class="level-del" onclick="removeLevelRow(${i})" ${dis}>×</button>
+      `;
+    } else {
+      row.innerHTML = `
+        <span class="level-num-label">${i + 1}</span>
+        <input class="level-input" type="number" value="${lvl.sb ?? ''}" min="1" placeholder="SB" ${dis}
+               oninput="updateLevel(${i},'sb',+this.value)">
+        <span class="level-sep">/</span>
+        <input class="level-input" type="number" value="${lvl.bb ?? ''}" min="1" placeholder="BB" ${dis}
+               oninput="updateLevel(${i},'bb',+this.value)">
+        <input class="level-input" type="number" value="${lvl.ante || ''}" min="0" placeholder="ante" ${dis}
+               style="width:52px" title="Ante (optional)"
+               oninput="updateLevel(${i},'ante',+this.value)">
+        <label class="break-label">
+          <input type="checkbox" ${dis} onchange="toggleBreak(${i},this.checked)"> Break
+        </label>
+        <button class="level-del" onclick="removeLevelRow(${i})" ${dis}>×</button>
+      `;
+    }
+    container.appendChild(row);
+  });
+}
+
+function updateLevel(index, field, value) {
+  if (pendingLevels[index]) pendingLevels[index][field] = value;
+}
+
+function toggleBreak(index, isBreak) {
+  if (!pendingLevels[index]) return;
+  pendingLevels[index] = isBreak ? { isBreak: true } : { sb: 0, bb: 0 };
+  renderLevelsTable();
+}
+
+function addLevelRow() {
+  if (config?.locked) return;
+  const last  = pendingLevels.filter(l => !l.isBreak).slice(-1)[0];
+  const newBb = last ? last.bb * 2 : 100;
+  pendingLevels.push({ sb: Math.round(newBb / 2), bb: newBb });
+  renderLevelsTable();
+}
+
+function removeLevelRow(index) {
+  if (config?.locked || pendingLevels.length <= 1) return;
+  pendingLevels.splice(index, 1);
+  renderLevelsTable();
+}
+
+function toggleRebuyOptions() {
+  const en = document.getElementById('cfgRebuyEnabled')?.checked;
+  const el = document.getElementById('rebuyOptions');
+  if (el) el.style.display = en ? 'block' : 'none';
+}
+
+function toggleAddonOptions() {
+  const en = document.getElementById('cfgAddonEnabled')?.checked;
+  const el = document.getElementById('addonOptions');
+  if (el) el.style.display = en ? 'block' : 'none';
+}
+
+function saveConfig() {
+  if (config?.locked) return;
+
+  const levels = pendingLevels
+    .map(l => {
+      if (l.isBreak) return { isBreak: true };
+      const o = { sb: +l.sb || 0, bb: +l.bb || 0 };
+      if (+l.ante > 0) o.ante = +l.ante;
+      return o;
+    })
+    .filter(l => l.isBreak || (l.sb > 0 && l.bb > 0));
+
+  if (levels.length === 0) {
+    alert('Add at least one blind level before saving.');
+    return;
+  }
+
+  const mins = Math.max(1, Math.min(60, parseInt(document.getElementById('cfgDuration').value) || 15));
+  const secs = mins * 60;
+
+  const newConfig = {
+    tournamentName:       document.getElementById('cfgName').value.trim() || 'Home Poker Night',
+    startingStack:        parseInt(document.getElementById('cfgStack').value)   || 10000,
+    buyIn:                parseInt(document.getElementById('cfgBuyin').value)   || 1000,
+    levelDurationMinutes: mins,
+    levels,
+    rebuyEnabled:         document.getElementById('cfgRebuyEnabled').checked,
+    rebuyCutoffType:      'level',
+    rebuyCutoffValue:     parseInt(document.getElementById('cfgCutoffValue').value) || 4,
+    maxRebuysPerPlayer:   parseInt(document.getElementById('cfgMaxRebuys').value)   || 2,
+    addonEnabled:         document.getElementById('cfgAddonEnabled').checked,
+    addonRules: {
+      stack: parseInt(document.getElementById('cfgAddonStack').value) || 10000,
+      cost:  parseInt(document.getElementById('cfgAddonCost').value)  || 1000,
+    },
+    locked: false,
+  };
+
+  // Saving config resets level 0 + timer so UI stays consistent
+  db.ref(`games/${urlPin}`).update({
+    config: newConfig,
+    'game/currentLevel':  0,
+    'game/levelDuration': secs,
+    'game/timer':         { isRunning: false, pausedAt: secs, startedAt: null },
+  }).then(() => {
+    const btn = document.getElementById('saveConfigBtn');
+    const orig = btn.textContent;
+    btn.textContent = 'Saved ✓';
+    setTimeout(() => { btn.textContent = orig; }, 1800);
+  });
+}
+
+// ── DURATION CONTROL ──────────────────────────────────────────────────────────
 function changeDuration(deltaMins) {
   const current = Math.round(levelDuration / 60);
   const next    = Math.max(1, Math.min(60, current + deltaMins));
   const secs    = next * 60;
-  // Use a multi-path update to atomically write both keys
   const updates = {};
   updates[`games/${urlPin}/game/levelDuration`] = secs;
   if (!gameState?.timer?.isRunning) {
@@ -508,12 +932,14 @@ function changeDuration(deltaMins) {
   db.ref().update(updates);
 }
 
-// ── TIMER CONTROLS ───────────────────────────────────────────────────────────
+// ── TIMER CONTROLS ────────────────────────────────────────────────────────────
 function toggleTimer() {
   if (gameState?.timer?.isRunning) {
     const timeLeft = getTimeLeft();
     gameRef().child('timer').update({ isRunning: false, pausedAt: timeLeft, startedAt: null });
   } else {
+    // Lock config the moment the tournament timer first starts
+    if (config && !config.locked) configRef().update({ locked: true });
     const timeLeft = getTimeLeft();
     gameRef().child('timer').update({
       isRunning: true,
@@ -527,41 +953,53 @@ function resetTimer() {
   gameRef().child('timer').update({ isRunning: false, pausedAt: levelDuration, startedAt: null });
 }
 
-// ── LEVEL CONTROLS ───────────────────────────────────────────────────────────
+// ── LEVEL CONTROLS ────────────────────────────────────────────────────────────
 function nextLevel() {
-  const level = gameState?.currentLevel ?? 0;
-  if (level >= LEVELS.length - 1) return;
+  if (!config) return;
+  const levels = getLevels();
+  const level  = gameState?.currentLevel ?? 0;
+  if (level >= levels.length - 1) return;
+  const secs = (config.levelDurationMinutes || 15) * 60;
   gameRef().update({
-    currentLevel: level + 1,
-    timer: { isRunning: false, pausedAt: levelDuration, startedAt: null },
+    currentLevel:  level + 1,
+    levelDuration: secs,
+    timer: { isRunning: false, pausedAt: secs, startedAt: null },
   });
 }
 
 function prevLevel() {
+  if (!config) return;
   const level = gameState?.currentLevel ?? 0;
   if (level <= 0) return;
+  const secs = (config.levelDurationMinutes || 15) * 60;
   gameRef().update({
-    currentLevel: level - 1,
-    timer: { isRunning: false, pausedAt: levelDuration, startedAt: null },
+    currentLevel:  level - 1,
+    levelDuration: secs,
+    timer: { isRunning: false, pausedAt: secs, startedAt: null },
   });
 }
 
-// ── PLAYER CONTROLS ──────────────────────────────────────────────────────────
+// ── PLAYER CONTROLS ───────────────────────────────────────────────────────────
 function addPlayer() {
   const input = document.getElementById('playerInput');
   const name  = input.value.trim();
   if (!name) return;
   const order = Object.keys(playersData).length;
-  playersRef().push({ name, rebuys: 0, eliminated: false, order });
+  playersRef().push({ name, rebuys: 0, addon: false, eliminated: false, order });
   input.value = '';
 }
 
 function addRebuy(key) {
   const p = playersData[key];
-  if (!p) return;
-  const level = gameState?.currentLevel ?? 0;
-  if (level >= REBUY_CUTOFF || (p.rebuys ?? 0) >= 2 || p.eliminated) return;
+  if (!p || !config) return;
+  if (!rebuysOpen() || (p.rebuys ?? 0) >= (config.maxRebuysPerPlayer ?? 2) || p.eliminated) return;
   playerRef(key).update({ rebuys: (p.rebuys ?? 0) + 1 });
+}
+
+function addAddon(key) {
+  const p = playersData[key];
+  if (!p || !config?.addonEnabled || p.addon || p.eliminated) return;
+  playerRef(key).update({ addon: true });
 }
 
 function toggleElim(key) {
@@ -570,7 +1008,7 @@ function toggleElim(key) {
   playerRef(key).update({ eliminated: !p.eliminated });
 }
 
-// ── RESET ─────────────────────────────────────────────────────────────────────
+// ── RESET ──────────────────────────────────────────────────────────────────────
 function confirmReset() {
   document.getElementById('resetConfirm').style.display = 'block';
   document.getElementById('fullResetBtn').style.display  = 'none';
@@ -580,10 +1018,13 @@ function cancelReset() {
   document.getElementById('fullResetBtn').style.display  = 'block';
 }
 function executeReset() {
+  const secs = (config?.levelDurationMinutes || 15) * 60;
+  // Unlock settings on reset so the host can adjust before the next game
+  if (config?.locked) configRef().update({ locked: false });
   gameRef().set({
-    currentLevel: 0,
-    levelDuration,
-    timer: { isRunning: false, pausedAt: levelDuration, startedAt: null },
+    currentLevel:  0,
+    levelDuration: secs,
+    timer: { isRunning: false, pausedAt: secs, startedAt: null },
   });
   playersRef().remove();
   cancelReset();

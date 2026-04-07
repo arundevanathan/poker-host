@@ -387,7 +387,6 @@ html, body {
 <script src="firebase-config.js"></script>
 <script>
 // ── DEVICE DETECTION ─────────────────────────────────────────────────────────
-// Sets data-device on <html> — lets CSS or JS target phone/tablet/laptop/tv.
 function applyDevice() {
   const w    = window.innerWidth;
   const tvUA = /TV|SmartTV|SMART-TV|HbbTV|NetCast|NETTV|Tizen|WebOS/i.test(navigator.userAgent);
@@ -412,32 +411,80 @@ if (!urlPin || !/^\d{4}$/.test(urlPin)) {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
-const LEVELS = [
-  { sb: 10,   bb: 20   },
-  { sb: 10,   bb: 20   },
-  { sb: 20,   bb: 40   },
-  { sb: 50,   bb: 100  },
-  { sb: 100,  bb: 200  },
-  { sb: 150,  bb: 300  },
-  { sb: 200,  bb: 400  },
-  { sb: 300,  bb: 600  },
-  { sb: 500,  bb: 1000 },
-  { sb: 1000, bb: 2000 },
-  { sb: 2000, bb: 4000 },
-];
-const REBUY_CUTOFF = 4;
+// ── DEFAULT CONFIG (fallback for games created before this version) ───────────
+const DEFAULT_CONFIG = {
+  tournamentName: 'Home Poker Night',
+  startingStack: 10000,
+  buyIn: 1000,
+  levelDurationMinutes: 15,
+  levels: [
+    { sb: 10,   bb: 20   },
+    { sb: 10,   bb: 20   },
+    { sb: 20,   bb: 40   },
+    { sb: 50,   bb: 100  },
+    { sb: 100,  bb: 200  },
+    { sb: 150,  bb: 300  },
+    { sb: 200,  bb: 400  },
+    { sb: 300,  bb: 600  },
+    { sb: 500,  bb: 1000 },
+    { sb: 1000, bb: 2000 },
+    { sb: 2000, bb: 4000 },
+  ],
+  rebuyEnabled: true,
+  rebuyCutoffType: 'level',
+  rebuyCutoffValue: 4,
+  maxRebuysPerPlayer: 2,
+  addonEnabled: false,
+  addonRules: { stack: 10000, cost: 1000 },
+  locked: false,
+};
 
+let config        = null;
 let levelDuration = 15 * 60;
 let gameState     = null;
 let playersData   = {};
 let alarmShown    = false;
 
-// ── FIREBASE LISTENERS ───────────────────────────────────────────────────────
+// ── HELPERS ───────────────────────────────────────────────────────────────────
+function getLevels() {
+  if (!config?.levels) return DEFAULT_CONFIG.levels;
+  if (Array.isArray(config.levels)) return config.levels;
+  return Object.values(config.levels);
+}
+
+function rebuysOpen() {
+  if (!config?.rebuyEnabled) return false;
+  const level = gameState?.currentLevel ?? 0;
+  if (config.rebuyCutoffType === 'level') return level < (config.rebuyCutoffValue ?? 4);
+  return true;
+}
+
+function fmt(n) { return n.toLocaleString('en-IN'); }
+function pad(n) { return String(n).padStart(2, '0'); }
+
+function blindLabel(lvl) {
+  if (!lvl) return '—';
+  if (lvl.isBreak) return 'BREAK';
+  let s = `${fmt(lvl.sb)} / ${fmt(lvl.bb)}`;
+  if (lvl.ante) s += ` · ante ${fmt(lvl.ante)}`;
+  return s;
+}
+
+// ── FIREBASE LISTENERS ────────────────────────────────────────────────────────
 if (urlPin && /^\d{4}$/.test(urlPin)) {
   db.ref('.info/connected').on('value', snap => {
     const ok = snap.val();
     document.getElementById('connDot').className    = 'conn-dot' + (ok ? ' connected' : '');
     document.getElementById('connLabel').textContent = ok ? 'Live' : 'Reconnecting...';
+  });
+
+  db.ref(`games/${urlPin}/config`).on('value', snap => {
+    config = snap.val() || DEFAULT_CONFIG;
+    if (config.levels && !Array.isArray(config.levels)) {
+      config.levels = Object.values(config.levels);
+    }
+    renderAll();
+    renderPlayers();
   });
 
   db.ref(`games/${urlPin}/game`).on('value', snap => {
@@ -454,28 +501,27 @@ if (urlPin && /^\d{4}$/.test(urlPin)) {
 
 setInterval(() => { if (gameState?.timer?.isRunning) renderTimer(); }, 1000);
 
-// ── HELPERS ──────────────────────────────────────────────────────────────────
+// ── TIMER MATHS ───────────────────────────────────────────────────────────────
 function getTimeLeft() {
   if (!gameState?.timer) return levelDuration;
   const t = gameState.timer;
   if (!t.isRunning) return t.pausedAt ?? levelDuration;
   return Math.max(0, (t.pausedAt ?? levelDuration) - Math.floor((Date.now() - t.startedAt) / 1000));
 }
-function fmt(n) { return n.toLocaleString('en-IN'); }
-function pad(n) { return String(n).padStart(2, '0'); }
 
-// ── RENDER ───────────────────────────────────────────────────────────────────
+// ── RENDER ────────────────────────────────────────────────────────────────────
 function renderAll() {
-  if (!gameState) return;
-  const level = gameState.currentLevel ?? 0;
-  const lvl  = LEVELS[level];
-  const next = LEVELS[level + 1];
+  if (!gameState || !config) return;
+  const level  = gameState.currentLevel ?? 0;
+  const levels = getLevels();
+  const lvl    = levels[level];
+  const next   = levels[level + 1];
+  if (!lvl) return;
 
-  // Header / phone-level-strip
-  const levelText = `Level ${level + 1} of ${LEVELS.length}`;
-  const blindText = `${fmt(lvl.sb)} / ${fmt(lvl.bb)}`;
-  const nextText  = next ? fmt(next.sb) + ' / ' + fmt(next.bb) : '— Final —';
-  const open      = level < REBUY_CUTOFF;
+  const levelText = `Level ${level + 1} of ${levels.length}`;
+  const blindText = blindLabel(lvl);
+  const nextText  = next ? blindLabel(next) : '— Final —';
+  const open      = rebuysOpen();
 
   ['levelLabel', 'levelLabelPhone'].forEach(id => {
     const el = document.getElementById(id);
@@ -484,8 +530,12 @@ function renderAll() {
   ['rebuyBadge', 'rebuyBadgePhone'].forEach(id => {
     const el = document.getElementById(id);
     if (!el) return;
-    el.className   = 'rebuy-badge ' + (open ? 'open' : 'closed');
-    el.textContent = open ? 'Rebuys Open' : 'Rebuys Closed';
+    if (!config.rebuyEnabled) {
+      el.className = 'rebuy-badge closed'; el.textContent = 'No Rebuys';
+    } else {
+      el.className   = 'rebuy-badge ' + (open ? 'open' : 'closed');
+      el.textContent = open ? 'Rebuys Open' : 'Rebuys Closed';
+    }
   });
   const blindsPhoneEl = document.getElementById('blindsPhone');
   if (blindsPhoneEl) blindsPhoneEl.textContent = blindText;
@@ -497,7 +547,7 @@ function renderAll() {
 }
 
 function renderTimer() {
-  if (!gameState) return;
+  if (!gameState || !config) return;
   const timeLeft  = getTimeLeft();
   const isRunning = gameState.timer?.isRunning;
 
@@ -505,7 +555,7 @@ function renderTimer() {
   el.textContent = pad(Math.floor(timeLeft / 60)) + ':' + pad(timeLeft % 60);
   el.className   = 'timer-digits' + (timeLeft <= 60 ? ' danger' : timeLeft <= 180 ? ' warning' : '');
 
-  const pct = (timeLeft / levelDuration) * 100;
+  const pct = levelDuration > 0 ? (timeLeft / levelDuration) * 100 : 0;
   const bar = document.getElementById('progressBar');
   bar.style.width      = pct + '%';
   bar.style.background = timeLeft <= 60 ? 'var(--red)' : timeLeft <= 180 ? 'var(--orange)' : 'var(--gold)';
@@ -517,8 +567,10 @@ function renderTimer() {
 }
 
 function renderPlayers() {
+  if (!config) return;
   const players = Object.values(playersData).sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
   const chips   = document.getElementById('playerChips');
+  const maxR    = config.maxRebuysPerPlayer ?? 2;
 
   if (players.length === 0) {
     chips.innerHTML = '<div style="font-size:11px;color:var(--muted)">Waiting for players...</div>';
@@ -532,7 +584,7 @@ function renderPlayers() {
   players.forEach(p => {
     const chip = document.createElement('div');
     chip.className = 'player-chip' + (p.eliminated ? ' eliminated' : '');
-    const dots = [0, 1].map(i =>
+    const dots = Array.from({ length: maxR }, (_, i) =>
       `<div class="p-rdot ${(p.rebuys ?? 0) > i ? 'used' : ''}"></div>`
     ).join('');
     chip.innerHTML = `<span>${p.name}</span><div class="p-rdots">${dots}</div>`;
@@ -542,7 +594,9 @@ function renderPlayers() {
   const active      = players.filter(p => !p.eliminated).length;
   const out         = players.length - active;
   const totalRebuys = players.reduce((s, p) => s + (p.rebuys ?? 0), 0);
-  const pool        = (players.length + totalRebuys) * 1000;
+  const totalAddons = players.filter(p => p.addon).length;
+  const buyIn       = config.buyIn ?? 1000;
+  const pool        = (players.length + totalRebuys + totalAddons) * buyIn;
 
   document.getElementById('playerSummary').innerHTML = `${active} active<br>${out} eliminated`;
   document.getElementById('statActive').textContent  = active;
@@ -552,13 +606,15 @@ function renderPlayers() {
   document.getElementById('stat2nd').textContent     = '₹' + Math.round(pool * 0.3).toLocaleString('en-IN');
 }
 
-// ── ALARM ─────────────────────────────────────────────────────────────────────
+// ── ALARM ──────────────────────────────────────────────────────────────────────
 function showAlarm() {
-  const level = gameState?.currentLevel ?? 0;
-  const next  = LEVELS[level + 1];
-  document.getElementById('alarmTitle').textContent   = `LEVEL ${level + 1} OVER`;
+  if (!config) return;
+  const level  = gameState?.currentLevel ?? 0;
+  const levels = getLevels();
+  const next   = levels[level + 1];
+  document.getElementById('alarmTitle').textContent = `LEVEL ${level + 1} OVER`;
   document.getElementById('alarmNext').innerHTML = next
-    ? `Next → <span>Level ${level + 2}: ${fmt(next.sb)} / ${fmt(next.bb)}</span>`
+    ? `Next → <span>Level ${level + 2}: ${blindLabel(next)}</span>`
     : `<span>Final level complete!</span>`;
   document.getElementById('alarmOverlay').classList.add('show');
 }

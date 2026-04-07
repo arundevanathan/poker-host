@@ -526,7 +526,32 @@ body {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
-const DEFAULT_LEVEL_DURATION = 15 * 60; // seconds
+const DEFAULT_CONFIG = {
+  tournamentName: 'Home Poker Night',
+  startingStack: 10000,
+  buyIn: 1000,
+  levelDurationMinutes: 15,
+  levels: [
+    { sb: 10,   bb: 20   },
+    { sb: 10,   bb: 20   },
+    { sb: 20,   bb: 40   },
+    { sb: 50,   bb: 100  },
+    { sb: 100,  bb: 200  },
+    { sb: 150,  bb: 300  },
+    { sb: 200,  bb: 400  },
+    { sb: 300,  bb: 600  },
+    { sb: 500,  bb: 1000 },
+    { sb: 1000, bb: 2000 },
+    { sb: 2000, bb: 4000 },
+  ],
+  rebuyEnabled: true,
+  rebuyCutoffType: 'level',
+  rebuyCutoffValue: 4,
+  maxRebuysPerPlayer: 2,
+  addonEnabled: false,
+  addonRules: { stack: 10000, cost: 1000 },
+  locked: false,
+};
 
 // Derive the base URL from the current page so links work on any host
 function getBaseUrl() {
@@ -578,12 +603,16 @@ async function launchNewGame() {
     const pin = await generateUniquePin();
     activePinForLaunch = pin;
 
-    // Initialise the game record in Firebase under games/{pin}/game
-    await db.ref(`games/${pin}/game`).set({
-      currentLevel: 0,
-      levelDuration: DEFAULT_LEVEL_DURATION,
-      timer: { isRunning: false, pausedAt: DEFAULT_LEVEL_DURATION, startedAt: null },
-      createdAt: firebase.database.ServerValue.TIMESTAMP,
+    // Initialise config + game state together
+    const secs = DEFAULT_CONFIG.levelDurationMinutes * 60;
+    await db.ref(`games/${pin}`).set({
+      config: DEFAULT_CONFIG,
+      game: {
+        currentLevel: 0,
+        levelDuration: secs,
+        timer: { isRunning: false, pausedAt: secs, startedAt: null },
+        createdAt: firebase.database.ServerValue.TIMESTAMP,
+      },
     });
 
     const playerLink = getBaseUrl() + 'join.html?pin=' + pin;
