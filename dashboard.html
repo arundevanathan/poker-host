@@ -215,10 +215,10 @@ html, body {
   .header { position: fixed; width: 100%; top: 0; padding: 10px 36px; }
   .header-center { display: block; } /* rebuy badge in center */
 
-  /* Main 3-column grid, fills space between header, players, footer */
+  /* Main 5-column grid: blinds | divider | timer | divider | next-blinds */
   .main {
     display: grid;
-    grid-template-columns: 1fr 2fr 1fr;
+    grid-template-columns: 1fr auto 2fr auto 1fr;
     align-items: center;
     flex-direction: unset;
     position: fixed;
