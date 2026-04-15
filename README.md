@@ -2,7 +2,7 @@
 
 A free, no-account tournament manager for home poker nights. One person hosts, everyone joins on their phone — no app install required.
 
-**[Live demo →](https://arun-devanathan.github.io/poker-host/index.html)** *(replace with your deployed URL)*
+**[Live Page →](https://arundevanathan.github.io/poker-host/index.html)** *(replace with your deployed URL)*
 
 ---
 
