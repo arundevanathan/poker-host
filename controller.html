@@ -229,6 +229,17 @@ body {
 }
 .lock-badge.unlocked { color: var(--green); border-color: var(--green); }
 .lock-badge.locked   { color: var(--red);   border-color: var(--red);   }
+.settings-error {
+  font-size: 11px;
+  color: var(--red);
+  padding: 8px 10px;
+  border: 1px solid rgba(231,76,60,0.3);
+  background: rgba(231,76,60,0.06);
+  margin-bottom: 12px;
+  letter-spacing: 0.5px;
+  text-align: center;
+  line-height: 1.5;
+}
 .locked-notice {
   font-size: 11px;
   color: var(--muted);
@@ -471,8 +482,9 @@ body {
         </div>
       </div>
 
+      <div class="settings-error" id="settingsError" style="display:none;margin-top:12px"></div>
       <button class="btn btn-gold" id="saveConfigBtn" onclick="saveConfig()"
-              style="width:100%;margin-top:12px;padding:13px;letter-spacing:2px">
+              style="width:100%;margin-top:8px;padding:13px;letter-spacing:2px">
         Save Settings
       </button>
     </div>
@@ -646,6 +658,15 @@ function rebuysOpen() {
 function fmt(n) { return n.toLocaleString('en-IN'); }
 function pad(n) { return String(n).padStart(2, '0'); }
 
+function showSettingsError(msg) {
+  const el = document.getElementById('settingsError');
+  if (!el) return;
+  el.textContent = msg;
+  el.style.display = 'block';
+  clearTimeout(showSettingsError._t);
+  showSettingsError._t = setTimeout(() => { el.style.display = 'none'; }, 4000);
+}
+
 function blindLabel(lvl) {
   if (!lvl) return '—';
   if (lvl.isBreak) return 'BREAK';
@@ -798,7 +819,7 @@ function renderPlayers() {
       ? `<button class="rebuy-btn" onclick="addAddon('${key}')" ${canAddon ? '' : 'disabled'} title="Add-on">+A</button>`
       : '';
     row.innerHTML = `
-      <div class="player-name">${p.name}</div>
+      <div class="player-name"></div>
       <div class="rdots">${dots}</div>
       <button class="rebuy-btn" onclick="addRebuy('${key}')" ${canRebuy ? '' : 'disabled'}>+R</button>
       <div class="rebuy-count">${p.rebuys ?? 0}/${maxR}</div>
@@ -807,6 +828,7 @@ function renderPlayers() {
         ${p.eliminated ? '↩' : '✕'}
       </button>
     `;
+    row.querySelector('.player-name').textContent = p.name;
     list.appendChild(row);
   });
 }
@@ -957,9 +979,9 @@ function importBlinds(input) {
       if (type === 'break') {
         parsed.push({ isBreak: true });
       } else {
-        const sb   = parseInt(cols[2]);
-        const bb   = parseInt(cols[3]);
-        const ante = parseInt(cols[4]);
+        const sb   = parseInt(cols[2], 10);
+        const bb   = parseInt(cols[3], 10);
+        const ante = parseInt(cols[4], 10);
         if (sb > 0 && bb > 0) {
           const lvl = { sb, bb };
           if (ante > 0) lvl.ante = ante;
@@ -967,7 +989,7 @@ function importBlinds(input) {
         }
       }
     }
-    if (parsed.length === 0) { alert('No valid levels found in CSV.'); return; }
+    if (parsed.length === 0) { showSettingsError('No valid levels found in CSV.'); return; }
     pendingLevels = parsed;
     renderLevelsTable();
   };
@@ -1000,7 +1022,7 @@ function saveConfig() {
     .filter(l => l.isBreak || (l.sb > 0 && l.bb > 0));
 
   if (levels.length === 0) {
-    alert('Add at least one blind level before saving.');
+    showSettingsError('Add at least one blind level before saving.');
     return;
   }
 

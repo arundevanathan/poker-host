@@ -588,7 +588,8 @@ function renderPlayers() {
     const dots = Array.from({ length: maxR }, (_, i) =>
       `<div class="p-rdot ${(p.rebuys ?? 0) > i ? 'used' : ''}"></div>`
     ).join('');
-    chip.innerHTML = `<span>${p.name}</span><div class="p-rdots">${dots}</div>`;
+    chip.innerHTML = `<span></span><div class="p-rdots">${dots}</div>`;
+    chip.querySelector('span').textContent = p.name;
     chips.appendChild(chip);
   });
 

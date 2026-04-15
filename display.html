@@ -556,7 +556,8 @@ function renderPlayers() {
     const status = p.eliminated
       ? '<span class="p-status" style="color:var(--red)">Out</span>'
       : `<span class="p-status">${p.rebuys ?? 0}R${p.addon ? ' +A' : ''}</span>`;
-    row.innerHTML = `${youTag}<div class="p-name">${p.name}</div><div class="p-rdots">${dots}</div>${status}`;
+    row.innerHTML = `${youTag}<div class="p-name"></div><div class="p-rdots">${dots}</div>${status}`;
+    row.querySelector('.p-name').textContent = p.name;
     list.appendChild(row);
   });
 

@@ -1,1 +1,15 @@
 # firebase-config.js is intentionally committed — only the apiKey is a secret placeholder
+# The real API key is injected at deploy time via GitHub Actions secret (FIREBASE_API_KEY)
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Local dev overrides
+*.local

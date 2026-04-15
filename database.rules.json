@@ -1,0 +1,75 @@
+{
+  "rules": {
+    "games": {
+      "$pin": {
+        // Anyone can read a game (players need to see state)
+        ".read": true,
+
+        "config": {
+          // Config can be written only when not locked, or to unlock it (reset flow)
+          // Validates shape and sane value ranges
+          ".write": "!data.exists() || !data.child('locked').val() || (!newData.child('locked').val())",
+          ".validate": "newData.hasChildren(['tournamentName','startingStack','buyIn','levelDurationMinutes','levels'])",
+          "tournamentName": { ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 60" },
+          "startingStack":  { ".validate": "newData.isNumber() && newData.val() >= 100 && newData.val() <= 10000000" },
+          "buyIn":          { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 1000000" },
+          "levelDurationMinutes": { ".validate": "newData.isNumber() && newData.val() >= 1 && newData.val() <= 120" },
+          "currency":       { ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 4" },
+          "autoProgress":   { ".validate": "newData.isBoolean()" },
+          "locked":         { ".validate": "newData.isBoolean()" },
+          "rebuyEnabled":   { ".validate": "newData.isBoolean()" },
+          "rebuyCutoffType":  { ".validate": "newData.isString()" },
+          "rebuyCutoffValue": { ".validate": "newData.isNumber() && newData.val() >= 0" },
+          "maxRebuysPerPlayer": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 20" },
+          "addonEnabled":   { ".validate": "newData.isBoolean()" },
+          "addonRules": {
+            "stack": { ".validate": "newData.isNumber() && newData.val() >= 0" },
+            "cost":  { ".validate": "newData.isNumber() && newData.val() >= 0" }
+          },
+          "levels": {
+            "$index": {
+              ".validate": "newData.hasChild('isBreak') || (newData.hasChild('sb') && newData.hasChild('bb'))",
+              "sb":      { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 10000000" },
+              "bb":      { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 10000000" },
+              "ante":    { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 10000000" },
+              "isBreak": { ".validate": "newData.isBoolean()" },
+              "$other":  { ".validate": false }
+            }
+          },
+          "$other": { ".validate": false }
+        },
+
+        "game": {
+          ".write": true,
+          ".validate": "newData.hasChildren(['currentLevel','levelDuration','timer'])",
+          "currentLevel":  { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 100" },
+          "levelDuration": { ".validate": "newData.isNumber() && newData.val() >= 60 && newData.val() <= 7200" },
+          "timer": {
+            "isRunning": { ".validate": "newData.isBoolean()" },
+            "pausedAt":  { ".validate": "newData.isNumber() && newData.val() >= 0" },
+            "startedAt": { ".validate": "newData.isNumber() || newData.val() === null" },
+            "$other":    { ".validate": false }
+          },
+          "$other": { ".validate": false }
+        },
+
+        "players": {
+          "$playerKey": {
+            ".write": true,
+            ".validate": "!newData.exists() || newData.hasChildren(['name','rebuys','eliminated'])",
+            "name":      { ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 30" },
+            "rebuys":    { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 20" },
+            "addon":     { ".validate": "newData.isBoolean()" },
+            "eliminated":{ ".validate": "newData.isBoolean()" },
+            "order":     { ".validate": "newData.isNumber() && newData.val() >= 0" },
+            "$other":    { ".validate": false }
+          }
+        },
+
+        "$other": { ".validate": false }
+      }
+    },
+    // Deny all other paths
+    "$other": { ".read": false, ".write": false }
+  }
+}
